@@ -1,0 +1,47 @@
+{
+  "login": {
+    "title": "Вход",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "submit": "Войти",
+    "registerLink": "Регистрация",
+    "success": "Успешный вход!",
+    "error": "Ошибка входа",
+    "serverError": "Ошибка сервера"
+  },
+  "register": {
+    "title": "Регистрация",
+    "username": "Имя пользователя",
+    "email": "Email",
+    "password": "Пароль",
+    "confirmPassword": "Повторите пароль",
+    "submit": "Зарегистрироваться",
+    "back": "Назад",
+    "success": "Регистрация прошла успешно!",
+    "error": "Ошибка регистрации",
+    "serverError": "Ошибка сервера",
+    "passwordMismatch": "Пароли не совпадают"
+  },
+  "app": {
+    "welcome": "Добро пожаловать в защищённый портал!",
+    "logout": "Выйти",
+      "profile": "Личный кабинет",
+    "home": "Главная",
+    "layers": "Слои",
+    "tiles": "Тайлы",
+    "changeLang": "Сменить язык",
+    "portalTitle" : "Nurassyl's floodapp",
+    "hecRas" : "Проекты HecRas"
+  },
+  "hec": {
+  "title": "HEC-RAS проекты",
+  "noProjects": "У вас нету добавленных HEC-RAS проектов.",
+  "add": "Добавить проект",
+  "addTitle": "Добавить HEC-RAS проект",
+  "name": "Название проекта",
+  "description": "Описание",
+  "cancel": "Отмена",
+  "save": "Сохранить"
+}
+
+}

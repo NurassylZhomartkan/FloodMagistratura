@@ -1,0 +1,46 @@
+{
+  "login": {
+    "title": "Кіру",
+    "username": "Қолданушының аты",
+    "password": "Құпия сөз",
+    "submit": "Өту",
+    "registerLink": "Тіркелу",
+    "success": "Кіру сәтті аяқталды!",
+    "error": "Кіру қателігі",
+    "serverError": "Сервер қателігі"
+  },
+  "register": {
+    "title": "Тіркелу",
+    "username": "Қолданушының аты",
+    "email": "Email",
+    "password": "Құпия сөз",
+    "confirmPassword": "Құпия сөзді қайталаныз",
+    "submit": "Тіркелу",
+    "back": "Артқа",
+    "success": "Тіркелу сәтті аяқталды!",
+    "error": "Тіркелу қателігі",
+    "serverError": "Сервер қателігі",
+    "passwordMismatch": "Құпия сөздер сәйкес келмейді"
+  },
+  "app": {
+    "welcome": "Қош келдініз!",
+    "logout": "Шығу",
+    "profile": "Жеке кабинет",
+    "home": "Басты бет",
+    "layers": "Қабаттар",
+    "tiles": "Тайлдар",
+    "changeLang": "Тілді өзгерту",
+    "portalTitle" : "Nurassyl's floodapp"
+  },
+  "hec": {
+  "title": "HEC-RAS жобалары",
+  "noProjects": "Сізде қосылған HEC-RAS жобалар жоқ.",
+  "add": "Жоба қосу",
+  "addTitle": "HEC-RAS жобасын қосу",
+  "name": "Жобаның атауы",
+  "description": "Сипаттамасы",
+  "cancel": "Бас тарту",
+  "save": "Сақтау"
+}
+
+}

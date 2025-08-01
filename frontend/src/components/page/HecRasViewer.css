@@ -1,0 +1,155 @@
+html, body { margin: 0; padding: 0; height: 100%; }
+    
+html, body { margin:0; padding:0; height:100% }
+#map { position:absolute; top:0; bottom:0; width:100% }
+#basemap-select { position:absolute; top:10px; left:10px; z-index:1; }
+/* … скопируйте остальные стили из вашего style.css … */
+#time-slider-container { position:absolute; bottom:20px; left:20px; display:flex; align-items:center; gap:8px; }
+#map-legend { position:absolute; top:60px; left:10px; background:rgba(255,255,255,0.8); padding:4px; }
+#area-info { position:absolute; bottom:60px; left:20px; background:rgba(255,255,255,0.8); padding:4px; cursor:pointer; }
+#area-fullscreen { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
+#area-fullscreen-content { background:#fff; padding:16px; position:relative; }
+#area-graph-canvas { width:600px; height:400px; }
+
+
+
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+    #basemap-select {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 6px 10px;
+      font-size: 14px;
+      z-index: 10;
+    }
+
+    #map-legend {
+      position: absolute;
+      bottom: 80px;
+      left: 20px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      font-family: sans-serif;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+
+    #map-legend ul { list-style: none; margin: 0; padding: 0; }
+
+    #tile-reader { display: none; }
+
+    #time-slider-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      text-align: center;
+      z-index: 10;
+    }
+
+    #time-slider { width: 100%; }
+
+    #time-label {
+      margin-top: 6px;
+      font-family: sans-serif;
+      font-size: 14px;
+      color: white;
+      text-shadow: 0 0 3px black;
+    }
+
+    #area-info {
+      position: absolute;
+      bottom: 80px;
+      right: 20px;
+      background: rgba(255,255,255,0.9);
+      padding: 8px 12px;
+      font-family: sans-serif;
+      font-size: 14px;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    #area-fullscreen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #area-fullscreen-content {
+      position: relative;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      width: 80%;
+      height: 80%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #area-fullscreen canvas {
+      flex: 1;
+    }
+
+    #area-fullscreen button {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+#play-button {
+  margin-right: 10px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+#time-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+#water-depth {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.9);
+  padding: 10px 15px;
+  font-family: sans-serif;
+  font-size: 16px;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  cursor: default;
+}
+
+
+#play-button {
+  margin-right: 10px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
