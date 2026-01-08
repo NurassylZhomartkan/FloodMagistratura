@@ -1,0 +1,38 @@
+/* src/styles/index.css */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* убираем боковой скролл */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* При необходимости переопределите цвет фона, но т.к. у нас Login/Register сами рисуют фон, здесь можно оставить нейтральный */
+body {
+  background-color: #fff; 
+}
+
+/* Скрытие скроллбара для элементов с классом no-scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Остальной CSS (если нужен) */
+
+
+
+
+
+
+

@@ -17,5 +17,12 @@ class HecRasProject(Base):
     # Переименовали атрибут, но сохранили имя колонки:
     project_metadata  = Column('metadata', JSON, nullable=True)
     layers            = Column(JSON, nullable=True)
+    share_hash        = Column(String, unique=True, nullable=True, index=True)
+    share_password    = Column(String, nullable=True)  # Хешированный пароль для доступа по ссылке
+
+    @property
+    def has_password(self) -> bool:
+        """Показывает, установлен ли пароль для share_hash"""
+        return self.share_password is not None
 
     owner = relationship("User", back_populates="projects")

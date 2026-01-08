@@ -1,0 +1,34 @@
+# Дополнительные зависимости для генерации тайлов из GeoTIFF
+# Установите эти пакеты для работы с рельефом:
+# pip install -r requirements_terrain.txt
+
+# Для работы с GeoTIFF файлами
+rasterio>=1.3.0
+
+# Для работы с проекциями координат (PROJ)
+# pyproj необходим для правильной настройки PROJ_DATA и избежания конфликтов с PostgreSQL
+pyproj>=3.6.0
+
+# Для работы с массивами данных
+numpy>=1.24.0
+
+# Для создания изображений и работы с PNG
+Pillow>=10.0.0
+
+# Для цветовых карт (colormap)
+matplotlib>=3.7.0
+
+# Для HTTP-запросов (для проксирования OpenTopography API)
+httpx>=0.24.0
+
+# Для морфологических операций в DTM фильтре
+scipy>=1.10.0
+
+# Для bilateral noise filter (шумоподавление)
+scikit-image>=0.21.0
+
+# Для работы с Google Earth Engine API (WorldCover данные)
+earthengine-api>=0.1.350
+
+
+

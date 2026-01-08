@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     username: str
     email: str # Добавлено поле email для регистрации
     password: str
+    language: Optional[str] = 'ru'  # Язык пользователя (ru, en, kz)
 
 class UserLogin(BaseModel):
     username: str
@@ -23,9 +24,39 @@ class UserOut(BaseModel):
     id: int
     username: str
     email: str
+    avatar_url: Optional[str] = None
+    default_map_style: Optional[str] = None
+    default_map_projection: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class UpdateEmailRequest(BaseModel):
+    new_email: str
+
+class RequestEmailChangeRequest(BaseModel):
+    new_email: str
+
+class VerifyEmailChangeRequest(BaseModel):
+    code: str
+
+class UpdatePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class UpdateMapSettingsRequest(BaseModel):
+    map_style: Optional[str] = None
+    map_projection: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 # ——— HEC-RAS проекты ——————————————————————————————————————————————————————
@@ -44,6 +75,8 @@ class HecRasSummary(BaseModel):
     created_at: datetime
     original_filename: str
     owner_id: int
+    share_hash: Optional[str] = None
+    has_password: bool = False  # Показывает, установлен ли пароль для share_hash
 
     class Config:
         from_attributes = True
@@ -66,3 +99,31 @@ class HecRasOut(HecRasSummary):
         from_attributes = True
         # Это позволяет Pydantic правильно работать с псевдонимами (alias)
         populate_by_name = True
+
+
+# ——— Пользовательские слои ————————————————————————————————————————————
+
+class CustomLayerCreate(BaseModel):
+    name: str
+    geojson_data: Dict[str, Any]  # GeoJSON объект
+    fill_color: Optional[str] = None
+    line_color: Optional[str] = None
+
+class CustomLayerUpdate(BaseModel):
+    name: Optional[str] = None
+    geojson_data: Optional[Dict[str, Any]] = None
+    fill_color: Optional[str] = None
+    line_color: Optional[str] = None
+
+class CustomLayerOut(BaseModel):
+    id: int
+    name: str
+    owner_id: int
+    geojson_data: Dict[str, Any]
+    fill_color: Optional[str] = None
+    line_color: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

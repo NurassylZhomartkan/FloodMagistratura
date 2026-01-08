@@ -1,15 +1,36 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Box, CircularProgress } from '@mui/material'
+
+// Импортируем утилиты для подавления ошибок ДО импорта других компонентов
+import './utils/suppressChromeExtensionErrors'
+import './utils/suppressMapboxErrors'
 
 import App          from './App'
 import Login        from './pages/Login'
 import Register     from './pages/Register'
-import PrivateRoute from './components/PrivateRoute'
+import VerifyEmail  from './pages/VerifyEmail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import PrivateRoute from './components/auth/PrivateRoute'
+import PublicRoute  from './components/auth/PublicRoute'
 
-import './index.css'
+import './styles/index.css'
 import { I18nextProvider } from 'react-i18next'
-import i18n from './i18n'
+import i18n from './config/i18n'
+import { registerMapCacheServiceWorker } from './utils/mapCache'
+
+// Ленивая загрузка shared viewers
+const HecRasSharedViewer = React.lazy(() => import('./pages/HecRasSharedViewer'))
+const FloodSharedViewer = React.lazy(() => import('./pages/FloodSharedViewer'))
+
+// Регистрируем Service Worker для кэширования тайлов карты
+if (import.meta.env.PROD) {
+  registerMapCacheServiceWorker().catch((error) => {
+    console.warn('Не удалось зарегистрировать Service Worker для кэширования карты:', error)
+  })
+}
 
 ReactDOM
   .createRoot(document.getElementById('root'))
@@ -20,8 +41,86 @@ ReactDOM
           <Routes>
             {/* корень → логин */}
             <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login"    element={<Login    />} />
-            <Route path="/register" element={<Register />} />
+            
+            {/* Публичные маршруты - перенаправляют авторизованных пользователей на /app */}
+            <Route 
+              path="/login" 
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              } 
+            />
+            <Route 
+              path="/verify-email" 
+              element={
+                <PublicRoute>
+                  <VerifyEmail />
+                </PublicRoute>
+              } 
+            />
+            <Route 
+              path="/forgot-password" 
+              element={
+                <PublicRoute>
+                  <ForgotPassword />
+                </PublicRoute>
+              } 
+            />
+            <Route 
+              path="/reset-password" 
+              element={
+                <PublicRoute>
+                  <ResetPassword />
+                </PublicRoute>
+              } 
+            />
+
+            {/* Публичный доступ к проектам HEC-RAS по share_hash (без авторизации и Layout) */}
+            <Route
+              path="/app/hec-ras/shared/:shareHash"
+              element={
+                <Suspense fallback={
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: '100vh' 
+                  }}>
+                    <CircularProgress />
+                  </Box>
+                }>
+                  <HecRasSharedViewer />
+                </Suspense>
+              }
+            />
+
+            {/* Публичный доступ к flood проектам по share_hash (без авторизации и Layout) */}
+            <Route
+              path="/app/flood/shared/:shareHash"
+              element={
+                <Suspense fallback={
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: '100vh' 
+                  }}>
+                    <CircularProgress />
+                  </Box>
+                }>
+                  <FloodSharedViewer />
+                </Suspense>
+              }
+            />
 
             {/* всё под /app/* — через PrivateRoute */}
             <Route

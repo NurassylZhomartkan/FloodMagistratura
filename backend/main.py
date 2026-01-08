@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database.routers import auth, hec_ras
+from database.routers import auth, hec_ras, map_tiles, uploads, flood, custom_layers
 
 app = FastAPI(
     title="FloodSite API",
@@ -13,8 +13,19 @@ app = FastAPI(
 )
 
 # Health-check
-@app.get("/", tags=["health"])
+@app.get(
+    "/",
+    tags=["health"],
+    summary="Проверка работоспособности API",
+    description="Возвращает статус работы API. Используется для проверки доступности сервера."
+)
 async def root():
+    """
+    Проверка работоспособности API.
+    
+    Returns:
+        dict: Словарь со статусом "ok" если сервер работает
+    """
     return {"status": "ok"}
 
 # CORS (Vite dev проксирует, но на всякий случай)
@@ -32,6 +43,8 @@ async def on_startup():
     from database.database import Base, engine
     import database.models.user      # noqa: F401
     import database.models.hec_ras   # noqa: F401
+    import database.models.custom_layer   # noqa: F401
+    import database.models.flood   # noqa: F401
     try:
         Base.metadata.create_all(bind=engine)
         logging.info("✅ Tables created")
@@ -42,4 +55,8 @@ async def on_startup():
 # ИСПРАВЛЕНО: Добавлен prefix="/auth" и тег для группировки в документации
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(hec_ras.router)   # /api/hec-ras/…
+app.include_router(map_tiles.router)   # /api/map/…
+app.include_router(uploads.router)   # /api/uploads/…
+app.include_router(flood.router)   # /api/flood/…
+app.include_router(custom_layers.router)   # /api/custom-layers/…
 

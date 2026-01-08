@@ -2,9 +2,108 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>FloodSite</title>
+    <script>
+      // Полифилл для global (необходим для некоторых библиотек, например @mapbox/mapbox-gl-draw)
+      var global = global || globalThis || window;
+      
+      // Раннее подавление ошибок от расширений Chrome
+      // Этот скрипт должен выполняться как можно раньше, до загрузки других скриптов
+      (function() {
+        'use strict';
+        if (typeof window === 'undefined') return;
+        
+        const isChromeExtensionError = (msg) => {
+          if (!msg) return false;
+          const msgStr = typeof msg === 'string' ? msg : String(msg);
+          const msgLower = msgStr.toLowerCase();
+          return msgLower.includes('could not establish connection') ||
+                 msgLower.includes('receiving end does not exist') ||
+                 msgLower.includes('chrome-extension://') ||
+                 msgLower.includes('extension context invalidated') ||
+                 msgLower.includes('message port closed') ||
+                 msgLower.includes('the message port closed') ||
+                 msgLower.includes('message port closed before a response was received');
+        };
+        
+        // Функция для обработки ошибок
+        const handleChromeExtensionError = function(event) {
+          if (!event) return;
+          
+          try {
+            let errorMessage = '';
+            const reason = event.reason || event.error || event.message || event;
+            
+            if (typeof reason === 'string') {
+              errorMessage = reason;
+            } else if (reason instanceof Error) {
+              errorMessage = reason.message || '';
+              if (reason.stack) {
+                errorMessage += ' ' + reason.stack;
+              }
+            } else if (reason && typeof reason === 'object') {
+              errorMessage = reason.message || reason.error?.message || reason.toString() || '';
+              if (reason.stack) {
+                errorMessage += ' ' + reason.stack;
+              }
+            } else {
+              errorMessage = String(reason);
+            }
+            
+            if (isChromeExtensionError(errorMessage)) {
+              event.preventDefault();
+              event.stopPropagation();
+              event.stopImmediatePropagation();
+              return false;
+            }
+          } catch (e) {
+            // Игнорируем ошибки в обработчике
+          }
+        };
+        
+        // Обработчик unhandledrejection с максимальным приоритетом
+        if (window.addEventListener) {
+          window.addEventListener('unhandledrejection', handleChromeExtensionError, { 
+            capture: true, 
+            passive: false 
+          });
+        }
+        
+        // Также устанавливаем на document
+        if (document && document.addEventListener) {
+          document.addEventListener('unhandledrejection', handleChromeExtensionError, { 
+            capture: true, 
+            passive: false 
+          });
+        }
+        
+        // Обработчик window.onerror
+        const originalOnError = window.onerror;
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (message && isChromeExtensionError(message)) return true;
+          if (error && error.message && isChromeExtensionError(error.message)) return true;
+          if (error && error.stack && isChromeExtensionError(error.stack)) return true;
+          if (originalOnError) return originalOnError.call(this, message, source, lineno, colno, error);
+          return false;
+        };
+        
+        // Перехватываем console.error для подавления ошибок в консоли
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          for (const arg of args) {
+            if (isChromeExtensionError(String(arg))) {
+              return; // Подавляем ошибку
+            }
+          }
+          originalConsoleError.apply(console, args);
+        };
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

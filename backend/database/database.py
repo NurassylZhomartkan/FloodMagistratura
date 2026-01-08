@@ -5,10 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Сначала пытаемся взять из переменной окружения,
-# иначе — локальный SQLite-файл.
+# иначе — подключаемся к локальной базе PostgreSQL floodDB.
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./floodsitedb.db"  # для быстрого локального старта
+    "postgresql+psycopg2://postgres:rootroot@localhost:5432/floodDB",
 )
 
 engine = create_engine(
