@@ -7,12 +7,9 @@ import { Box, CircularProgress } from '@mui/material'
 import './utils/suppressChromeExtensionErrors'
 import './utils/suppressMapboxErrors'
 
-import App          from './App'
-import Login        from './pages/Login'
-import Register     from './pages/Register'
-import VerifyEmail  from './pages/VerifyEmail'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
+import { ThemeProvider } from '@mui/material/styles'
+import theme from './theme'
+
 import PrivateRoute from './components/auth/PrivateRoute'
 import PublicRoute  from './components/auth/PublicRoute'
 
@@ -21,9 +18,14 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from './config/i18n'
 import { registerMapCacheServiceWorker } from './utils/mapCache'
 
-// Ленивая загрузка shared viewers
+const App              = React.lazy(() => import('./App'))
+const Login            = React.lazy(() => import('./pages/Login'))
+const Register         = React.lazy(() => import('./pages/Register'))
+const VerifyEmail      = React.lazy(() => import('./pages/VerifyEmail'))
+const ForgotPassword   = React.lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword    = React.lazy(() => import('./pages/ResetPassword'))
 const HecRasSharedViewer = React.lazy(() => import('./pages/HecRasSharedViewer'))
-const FloodSharedViewer = React.lazy(() => import('./pages/FloodSharedViewer'))
+const FloodSharedViewer  = React.lazy(() => import('./pages/FloodSharedViewer'))
 
 // Регистрируем Service Worker для кэширования тайлов карты
 if (import.meta.env.PROD) {
@@ -36,106 +38,40 @@ ReactDOM
   .createRoot(document.getElementById('root'))
   .render(
     <React.StrictMode>
+      <ThemeProvider theme={theme}>
       <I18nextProvider i18n={i18n}>
         <BrowserRouter>
-          <Routes>
-            {/* корень → логин */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            
-            {/* Публичные маршруты - перенаправляют авторизованных пользователей на /app */}
-            <Route 
-              path="/login" 
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/register" 
-              element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/verify-email" 
-              element={
-                <PublicRoute>
-                  <VerifyEmail />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/forgot-password" 
-              element={
-                <PublicRoute>
-                  <ForgotPassword />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/reset-password" 
-              element={
-                <PublicRoute>
-                  <ResetPassword />
-                </PublicRoute>
-              } 
-            />
+          <Suspense fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+              <CircularProgress />
+            </Box>
+          }>
+            <Routes>
+              {/* корень → логин */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Публичный доступ к проектам HEC-RAS по share_hash (без авторизации и Layout) */}
-            <Route
-              path="/app/hec-ras/shared/:shareHash"
-              element={
-                <Suspense fallback={
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: '100vh' 
-                  }}>
-                    <CircularProgress />
-                  </Box>
-                }>
-                  <HecRasSharedViewer />
-                </Suspense>
-              }
-            />
+              {/* Публичные маршруты - перенаправляют авторизованных пользователей на /app */}
+              <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />
+              <Route path="/verify-email"    element={<PublicRoute><VerifyEmail /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+              <Route path="/reset-password"  element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-            {/* Публичный доступ к flood проектам по share_hash (без авторизации и Layout) */}
-            <Route
-              path="/app/flood/shared/:shareHash"
-              element={
-                <Suspense fallback={
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: '100vh' 
-                  }}>
-                    <CircularProgress />
-                  </Box>
-                }>
-                  <FloodSharedViewer />
-                </Suspense>
-              }
-            />
+              {/* Публичный доступ к проектам HEC-RAS по share_hash (без авторизации и Layout) */}
+              <Route path="/app/hec-ras/shared/:shareHash" element={<HecRasSharedViewer />} />
 
-            {/* всё под /app/* — через PrivateRoute */}
-            <Route
-              path="/app/*"
-              element={
-                <PrivateRoute>
-                  <App />
-                </PrivateRoute>
-              }
-            />
+              {/* Публичный доступ к flood проектам по share_hash (без авторизации и Layout) */}
+              <Route path="/app/flood/shared/:shareHash" element={<FloodSharedViewer />} />
 
-            {/* иначе → на корень */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* всё под /app/* — через PrivateRoute */}
+              <Route path="/app/*" element={<PrivateRoute><App /></PrivateRoute>} />
+
+              {/* иначе → на корень */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </I18nextProvider>
+      </ThemeProvider>
     </React.StrictMode>
   )

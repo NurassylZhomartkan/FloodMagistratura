@@ -104,7 +104,7 @@ export default function VerifyEmail() {
                 width: 40,
                 height: 40,
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                background: "linear-gradient(135deg, #0077B6 0%, #48CAE4 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -133,7 +133,7 @@ export default function VerifyEmail() {
               <CircularProgress 
                 sx={{ 
                   mb: 2,
-                  color: "#6366F1",
+                  color: "primary.main",
                 }} 
               />
               <Typography
@@ -215,7 +215,7 @@ export default function VerifyEmail() {
                 variant="contained"
                 fullWidth
                 sx={{
-                  backgroundColor: "#6366F1",
+                  backgroundColor: "primary.main",
                   color: "white",
                   padding: "12px",
                   borderRadius: "12px",
@@ -224,8 +224,8 @@ export default function VerifyEmail() {
                   fontWeight: 600,
                   boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
                   "&:hover": {
-                    backgroundColor: "#4F46E5",
-                    boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
+                    backgroundColor: "primary.dark",
+                    boxShadow: "0 6px 20px 0 rgba(0, 119, 182, 0.45)",
                   },
                 }}
               >
@@ -294,7 +294,7 @@ export default function VerifyEmail() {
                 variant="contained"
                 fullWidth
                 sx={{
-                  backgroundColor: "#6366F1",
+                  backgroundColor: "primary.main",
                   color: "white",
                   padding: "12px",
                   borderRadius: "12px",
@@ -303,8 +303,8 @@ export default function VerifyEmail() {
                   fontWeight: 600,
                   boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
                   "&:hover": {
-                    backgroundColor: "#4F46E5",
-                    boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
+                    backgroundColor: "primary.dark",
+                    boxShadow: "0 6px 20px 0 rgba(0, 119, 182, 0.45)",
                   },
                 }}
               >

@@ -3,7 +3,8 @@
 
 import React, { Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert } from '@mui/material';
+import { Box, CircularProgress, Typography, TextField, Alert } from '@mui/material';
+import BaseModal from '../components/BaseModal';
 import { useTranslation } from 'react-i18next';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -170,56 +171,45 @@ export default function HecRasSharedViewer() {
 
   if (passwordRequired) {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        width: '100vw'
-      }}>
-        <Dialog open={true} maxWidth="sm" fullWidth>
-          <DialogTitle>{t('hecRasSharedViewer.passwordRequired')}</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('hecRasSharedViewer.passwordRequiredDescription')}
-            </Typography>
-            <TextField
-              fullWidth
-              type="password"
-              label={t('hecRasSharedViewer.password')}
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError('');
-              }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handlePasswordSubmit();
-                }
-              }}
-              error={!!passwordError}
-              helperText={passwordError}
-              disabled={verifyingPassword}
-              autoFocus
-            />
-            {passwordError && (
-              <Alert severity="error" sx={{ mt: 2 }} onClose={() => setPasswordError('')}>
-                {passwordError}
-              </Alert>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => navigate('/')}>{t('common.cancel')}</Button>
-            <Button 
-              onClick={handlePasswordSubmit} 
-              variant="contained"
-              disabled={verifyingPassword || !password.trim()}
-            >
-              {verifyingPassword ? t('hecRasSharedViewer.verifying') : t('hecRasSharedViewer.signIn')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+      <BaseModal
+        open={true}
+        onClose={() => navigate('/')}
+        title={t('hecRasSharedViewer.passwordRequired')}
+        confirmText={verifyingPassword ? t('hecRasSharedViewer.verifying') : t('hecRasSharedViewer.signIn')}
+        onConfirm={handlePasswordSubmit}
+        confirmLoading={verifyingPassword}
+        confirmDisabled={!password.trim()}
+        cancelText={t('common.cancel')}
+        onCancel={() => navigate('/')}
+      >
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          {t('hecRasSharedViewer.passwordRequiredDescription')}
+        </Typography>
+        <TextField
+          fullWidth
+          type="password"
+          label={t('hecRasSharedViewer.password')}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordError('');
+          }}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handlePasswordSubmit();
+            }
+          }}
+          error={!!passwordError}
+          helperText={passwordError}
+          disabled={verifyingPassword}
+          autoFocus
+        />
+        {passwordError && (
+          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setPasswordError('')}>
+            {passwordError}
+          </Alert>
+        )}
+      </BaseModal>
     );
   }
 

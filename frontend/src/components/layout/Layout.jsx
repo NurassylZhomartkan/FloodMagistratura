@@ -119,7 +119,7 @@ export default function Layout({ children }) {
           width: `calc(100% - ${sidebarWidth}px)`,
           transition: 'margin-left 0.3s ease, width 0.3s ease',
           overflow: isMapViewer ? 'hidden' : 'auto',
-          backgroundColor: '#F5F5F5',
+          backgroundColor: '#F0F4F8',
           ...(isMapViewer ? {
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',

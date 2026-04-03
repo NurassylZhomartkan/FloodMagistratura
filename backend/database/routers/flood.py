@@ -24,7 +24,8 @@ from database.crud import (
     create_flood_project as crud_create_flood_project,
     get_flood_project,
     get_flood_project_by_share_hash,
-    update_flood_project_share
+    update_flood_project_share,
+    list_flood_projects_by_owner,
 )
 from database.file_paths import get_terrain_file_path
 from database.dtm_filter_core import apply_dtm_filter_geotiff_bytes
@@ -1583,3 +1584,23 @@ async def download_shared_terrain_file(
             detail=f"Ошибка при чтении файла: {str(e)}"
         )
 
+
+@router.get(
+    "/my-projects",
+    summary="Flood-проекты текущего пользователя из БД",
+    description="Возвращает flood-проекты пользователя, сохранённые в базе данных."
+)
+def list_my_flood_projects(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    projects = list_flood_projects_by_owner(db, owner_id=user.id)
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "has_share": p.share_hash is not None,
+        }
+        for p in projects
+    ]

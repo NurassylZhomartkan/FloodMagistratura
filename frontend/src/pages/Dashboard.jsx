@@ -1,618 +1,646 @@
 // src/components/page/Dashboard.jsx
-// -------------------------------------------------------
-// Главная страница с дашбордами:
-// - Активные зоны подтопления
-// - Площадь/население в зоне риска
-// - Критические объекты
-// -------------------------------------------------------
 
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Grid,
-  Card,
-  CardContent,
   Chip,
   List,
   ListItem,
-  ListItemText,
-  ListItemIcon,
   Divider,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
+  GlobalStyles,
+  CircularProgress,
 } from '@mui/material';
-import WarningIcon from '@mui/icons-material/Warning';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PeopleIcon from '@mui/icons-material/People';
-import HomeIcon from '@mui/icons-material/Home';
-import SchoolIcon from '@mui/icons-material/School';
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
-import FactoryIcon from '@mui/icons-material/Factory';
-import WaterDropIcon from '@mui/icons-material/WaterDrop';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SpeedIcon from '@mui/icons-material/Speed';
-import PublicIcon from '@mui/icons-material/Public';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import InfoIcon from '@mui/icons-material/Info';
-import { usePageTitle } from '../utils/usePageTitle';
-import PageContainer from '../components/layout/PageContainer';
+import BaseModal         from '../components/BaseModal';
+import WarningIcon       from '@mui/icons-material/Warning';
+import LocationOnIcon    from '@mui/icons-material/LocationOn';
+import PeopleIcon        from '@mui/icons-material/People';
+import HomeIcon          from '@mui/icons-material/Home';
+import WaterDropIcon     from '@mui/icons-material/WaterDrop';
+import TrendingUpIcon    from '@mui/icons-material/TrendingUp';
+import AccessTimeIcon    from '@mui/icons-material/AccessTime';
+import SpeedIcon         from '@mui/icons-material/Speed';
+import PublicIcon        from '@mui/icons-material/Public';
+import { usePageTitle }  from '../utils/usePageTitle';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate }   from 'react-router-dom';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltipPlugin,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
-// Хук для анимации чисел от 0 до целевого значения
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltipPlugin, Legend);
+
+/* ─── Animated number hook ───────────────────────────────── */
 const useAnimatedNumber = (targetValue, duration = 2000, decimals = 0) => {
   const [currentValue, setCurrentValue] = useState(0);
 
   useEffect(() => {
-    if (typeof targetValue !== 'number') {
-      setCurrentValue(targetValue);
-      return;
-    }
-
+    if (typeof targetValue !== 'number') { setCurrentValue(targetValue); return; }
     const startTime = Date.now();
-    const startValue = 0;
-    const endValue = targetValue;
-
     const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Используем easing функцию для плавной анимации
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      
-      const newValue = startValue + (endValue - startValue) * easeOutQuart;
-      setCurrentValue(newValue);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setCurrentValue(endValue);
-      }
+      const p = Math.min((Date.now() - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 4);
+      setCurrentValue(targetValue * ease);
+      if (p < 1) requestAnimationFrame(animate);
+      else setCurrentValue(targetValue);
     };
-
     requestAnimationFrame(animate);
   }, [targetValue, duration]);
 
-  // Форматируем число с нужным количеством знаков после запятой
-  if (typeof currentValue !== 'number') {
-    return currentValue;
-  }
-
-  if (decimals === 0) {
-    return Math.round(currentValue);
-  }
-
-  return parseFloat(currentValue.toFixed(decimals));
+  if (typeof currentValue !== 'number') return currentValue;
+  return decimals === 0 ? Math.round(currentValue) : parseFloat(currentValue.toFixed(decimals));
 };
 
-// Компонент для отображения анимированного числа
-const AnimatedNumber = ({ value, decimals = 0, suffix = '', prefix = '', formatNumber = null, showSign = false }) => {
-  const animatedValue = useAnimatedNumber(value, 2000, decimals);
-  
-  if (formatNumber) {
-    return <>{formatNumber(animatedValue)}</>;
-  }
-
-  if (typeof animatedValue === 'number') {
-    let formattedValue;
-    if (decimals === 0) {
-      formattedValue = Math.round(animatedValue).toLocaleString('ru-RU');
-    } else {
-      formattedValue = animatedValue.toLocaleString('ru-RU', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    }
-    
-    // Добавляем знак "+" для положительных чисел, если нужно
-    if (showSign && animatedValue > 0) {
-      return <>{prefix}+{formattedValue}{suffix}</>;
-    }
-    
-    return <>{prefix}{formattedValue}{suffix}</>;
-  }
-
-  return <>{prefix}{animatedValue}{suffix}</>;
+const AnimatedNumber = ({ value, decimals = 0, suffix = '', prefix = '', showSign = false }) => {
+  const v = useAnimatedNumber(value, 2000, decimals);
+  if (typeof v !== 'number') return <>{prefix}{v}{suffix}</>;
+  const fmt = decimals === 0
+    ? Math.round(v).toLocaleString('ru-RU')
+    : v.toLocaleString('ru-RU', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  if (showSign && v > 0) return <>{prefix}+{fmt}{suffix}</>;
+  return <>{prefix}{fmt}{suffix}</>;
 };
 
-// Рандомные данные (временно)
-const getRandomData = () => ({
+/* ─── Static data ────────────────────────────────────────── */
+const STATIC_DATA = {
   currentStatus: {
-    avgWaterLevel: 2.4,
-    feelsLike: 2.4,
-    change24h: 0.3,
-    maxLevel: 3.8,
-    minLevel: 0.5,
-    precipitation: 45.2,
-    criticalZones: 2,
-    activeZones: 4,
+    avgWaterLevel: 2.4, feelsLike: 2.4, change24h: 0.3,
+    maxLevel: 3.8, minLevel: 0.5, precipitation: 45.2,
+    criticalZones: 2, activeZones: 0,
   },
-  activeZones: 4,
-  totalArea: 247.5,
-  populationAtRisk: 18450,
-  avgWaterLevel: 2.4,
-  maxWaterLevel: 3.8,
-  currentVelocity: 1.5,
-  timeToPeak: 6,
-  criticalObjects: 12,
-  affectedBuildings: 342,
-  waterRiseRate: 0.15,
-  activeZonesList: [
-    { id: 1, name: 'Зона А (Северный район)', status: 'Критическая', level: 'Высокий', waterLevel: 3.2 },
-    { id: 2, name: 'Зона Б (Центральный район)', status: 'Активная', level: 'Средний', waterLevel: 1.8 },
-    { id: 3, name: 'Зона В (Южный район)', status: 'Активная', level: 'Низкий', waterLevel: 0.9 },
-    { id: 4, name: 'Зона Г (Восточный район)', status: 'Мониторинг', level: 'Низкий', waterLevel: 0.5 },
-  ],
-  criticalObjectsList: [
-    { id: 1, name: 'Больница №3', type: 'hospital', zone: 'Зона А', status: 'Под угрозой' },
-    { id: 2, name: 'Школа №12', type: 'school', zone: 'Зона А', status: 'Под угрозой' },
-    { id: 3, name: 'Завод "Стройматериалы"', type: 'factory', zone: 'Зона Б', status: 'Мониторинг' },
-    { id: 4, name: 'Жилой комплекс "Восток"', type: 'residential', zone: 'Зона Б', status: 'Под угрозой' },
-  ],
-});
-
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'Критическая':
-    case 'Под угрозой':
-      return 'error';
-    case 'Активная':
-      return 'warning';
-    case 'Мониторинг':
-      return 'info';
-    default:
-      return 'default';
-  }
+  totalArea: 247.5, populationAtRisk: 18450,
+  avgWaterLevel: 2.4, maxWaterLevel: 3.8,
+  currentVelocity: 1.5, timeToPeak: 6,
+  criticalObjects: 12, affectedBuildings: 342,
 };
 
-const getObjectIcon = (type) => {
-  switch (type) {
-    case 'hospital':
-      return <LocalHospitalIcon />;
-    case 'school':
-      return <SchoolIcon />;
-    case 'factory':
-      return <FactoryIcon />;
-    case 'residential':
-      return <HomeIcon />;
-    default:
-      return <LocationOnIcon />;
-  }
+const statusMeta = {
+  'Критическая': { color: 'error',   hex: '#EF4444' },
+  'Под угрозой': { color: 'error',   hex: '#EF4444' },
+  'Активная':    { color: 'warning', hex: '#F59E0B' },
+  'Мониторинг':  { color: 'info',    hex: '#0EA5E9' },
 };
+const getStatusColor = (s) => (statusMeta[s] ?? { color: 'default' }).color;
+const getStatusHex   = (s) => (statusMeta[s] ?? { hex: '#9CA3AF' }).hex;
 
-// Компонент маленькой карточки метрики
-const SmallMetricCard = ({ icon: Icon, title, value, unit, description, iconColor = '#2196f3', animateValue = true, decimals = 0 }) => {
-  // Если value уже является строкой (например, форматированное число), не анимируем
+
+/* ─── SmallMetricCard ────────────────────────────────────── */
+const SmallMetricCard = ({
+  icon: Icon, title, value, unit, description,
+  iconColor = '#0EA5E9', animateValue = true, decimals = 0, delay = 0,
+}) => {
   const shouldAnimate = animateValue && typeof value === 'number';
-  
   return (
-    <Card
-      sx={{
-        height: '100%',
-        borderRadius: 3,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        bgcolor: 'white',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        },
-      }}
-    >
-      <CardContent sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-          <Icon sx={{ fontSize: 28, color: iconColor, mr: 1 }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5 }}>
-            {title}
+    <Box sx={{
+      height: '100%', bgcolor: '#fff', borderRadius: { xs: '16px', sm: '20px' },
+      p: { xs: 1.75, sm: 2, md: 2.5 },
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      position: 'relative', overflow: 'hidden',
+      animation: 'wxFadeUp 0.5s ease both',
+      animationDelay: `${delay}ms`,
+      transition: 'transform 0.25s, box-shadow 0.25s',
+      '&:hover': { transform: 'translateY(-4px)', boxShadow: `0 10px 28px rgba(0,0,0,0.1)` },
+      '&::before': {
+        content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+        background: `linear-gradient(90deg, ${iconColor}, ${iconColor}55)`,
+      },
+    }}>
+      {/* Icon badge */}
+      <Box sx={{
+        position: 'absolute', top: { xs: 12, sm: 16 }, right: { xs: 12, sm: 16 },
+        width: { xs: 36, sm: 40, md: 44 }, height: { xs: 36, sm: 40, md: 44 },
+        borderRadius: { xs: '10px', sm: '12px', md: '14px' },
+        bgcolor: `${iconColor}16`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon sx={{ fontSize: { xs: 18, sm: 20, md: 22 }, color: iconColor }} />
+      </Box>
+
+      <Typography sx={{
+        fontSize: { xs: 9, sm: 10 }, fontWeight: 700, color: '#9CA3AF',
+        textTransform: 'uppercase', letterSpacing: '0.1em',
+        mb: { xs: 2, sm: 2.5 },
+        pr: { xs: 5, sm: 6 },
+      }}>
+        {title}
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: { xs: 0.75, sm: 1 } }}>
+        <Typography sx={{ fontSize: { xs: 26, sm: 30, md: 34 }, fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+          {shouldAnimate ? <AnimatedNumber value={value} decimals={decimals} /> : value}
+        </Typography>
+        {unit && (
+          <Typography sx={{ fontSize: { xs: 12, sm: 13, md: 14 }, color: '#9CA3AF', fontWeight: 600, ml: 0.25 }}>
+            {unit}
           </Typography>
-        </Box>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 'bold', 
-            mb: 0.5,
-            color: 'text.primary',
-            fontSize: { xs: '1.75rem', sm: '2rem' }
-          }}
-        >
-          {shouldAnimate ? (
-            <AnimatedNumber value={value} decimals={decimals} />
-          ) : (
-            value
-          )}
-          {unit && (
-            <Typography component="span" variant="body1" sx={{ ml: 0.5, fontWeight: 'normal' }}>
-              {unit}
-            </Typography>
-          )}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
-          {description}
-        </Typography>
-      </CardContent>
-    </Card>
+        )}
+      </Box>
+
+      <Typography sx={{ fontSize: { xs: 11, sm: 12 }, color: '#6B7280', lineHeight: 1.4 }}>
+        {description}
+      </Typography>
+    </Box>
   );
 };
 
+/* ═══════════════════════════════════════════════════════════
+   Dashboard
+   ═══════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   usePageTitle('pageTitles.dashboard');
-  const data = getRandomData();
+
+  const [hydroPosts, setHydroPosts] = useState([]);
+  const [hydroLatest, setHydroLatest] = useState([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [hydroHistory, setHydroHistory] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+
+  useEffect(() => {
+    fetch('/stations/posts.json')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.statusCode === 200 && json.data) {
+          const hydroCategory = json.data.find((cat) => cat?.category?.id === 2);
+          if (hydroCategory?.sites) setHydroPosts(hydroCategory.sites);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/hydro-stations/latest')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows) => {
+        setHydroLatest(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        setHydroLatest([]);
+      });
+  }, []);
+
+  const levelByStationId = React.useMemo(() => {
+    const map = new Map();
+    hydroLatest
+      .filter((r) => r?.param === 'level')
+      .forEach((r) => {
+        const sid = String(r.station_id ?? '').trim();
+        if (!sid) return;
+        map.set(sid, r);
+      });
+    return map;
+  }, [hydroLatest]);
+
+  const hydroPostsWithState = React.useMemo(() => {
+    return hydroPosts.map((post) => {
+      const sid = String(post?.code ?? '').trim();
+      const levelRow = levelByStationId.get(sid);
+      const actual = Number(levelRow?.actual_level);
+      const danger = Number(levelRow?.danger_level);
+      const hasActual = Number.isFinite(actual);
+      const hasDanger = Number.isFinite(danger);
+      const isDanger = hasActual && hasDanger && actual > danger;
+      const exceedCm = isDanger ? actual - danger : 0;
+      return {
+        ...post,
+        actualLevelCm: hasActual ? actual : null,
+        dangerLevelCm: hasDanger ? danger : null,
+        exceedCm,
+        isDanger,
+      };
+    });
+  }, [hydroPosts, levelByStationId]);
+
+  const hydroSummary = React.useMemo(() => {
+    const postsWithActual = hydroPostsWithState.filter((p) => Number.isFinite(p.actualLevelCm));
+    const dangerPosts = hydroPostsWithState.filter((p) => p.isDanger);
+    const sumExceedCm = dangerPosts.reduce((acc, p) => acc + p.exceedCm, 0);
+    const avgLevelCm = postsWithActual.length
+      ? postsWithActual.reduce((acc, p) => acc + p.actualLevelCm, 0) / postsWithActual.length
+      : 0;
+    const maxLevelCm = postsWithActual.length
+      ? Math.max(...postsWithActual.map((p) => p.actualLevelCm))
+      : 0;
+    const minLevelCm = postsWithActual.length
+      ? Math.min(...postsWithActual.map((p) => p.actualLevelCm))
+      : 0;
+
+    return {
+      sumExceedM: sumExceedCm / 100,
+      avgLevelM: avgLevelCm / 100,
+      maxLevelM: maxLevelCm / 100,
+      minLevelM: minLevelCm / 100,
+      dangerCount: dangerPosts.length,
+    };
+  }, [hydroPostsWithState]);
+
+  useEffect(() => {
+    if (!historyOpen || !selectedPost?.code) return;
+    const params = new URLSearchParams({
+      station_id: String(selectedPost.code),
+      metric: 'level',
+    });
+    setHistoryLoading(true);
+    setHistoryError('');
+    fetch(`/api/hydro-stations/history?${params.toString()}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((json) => {
+        setHydroHistory(json);
+      })
+      .catch(() => {
+        setHydroHistory(null);
+        setHistoryError(t('dashboard.historyLoadError', 'Не удалось загрузить историю поста'));
+      })
+      .finally(() => setHistoryLoading(false));
+  }, [historyOpen, selectedPost, t]);
+
+  const hydroLineData = React.useMemo(() => {
+    if (!hydroHistory?.ok || !Array.isArray(hydroHistory.levels)) return null;
+    const levels = hydroHistory.levels
+      .filter((r) => r?.date)
+      .slice()
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (!levels.length) return null;
+    return {
+      labels: levels.map((r) => r.date),
+      datasets: [
+        {
+          label: t('databasePage.chartActual', 'Фактический уровень, см'),
+          data: levels.map((r) => (r.actual_level == null ? null : r.actual_level)),
+          borderColor: 'rgba(0, 119, 182, 0.95)',
+          backgroundColor: 'rgba(0, 119, 182, 0.12)',
+          pointRadius: 2,
+          tension: 0.25,
+        },
+        {
+          label: t('databasePage.chartCritical', 'Критический уровень, см'),
+          data: levels.map((r) => (r.danger_level == null ? null : r.danger_level)),
+          borderColor: 'rgba(220, 38, 38, 0.95)',
+          backgroundColor: 'rgba(220, 38, 38, 0.08)',
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.05,
+        },
+      ],
+    };
+  }, [hydroHistory, t]);
+
+  const hydroLineOptions = React.useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top' },
+      },
+      scales: {
+        x: { grid: { color: 'rgba(148,163,184,0.12)' } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: t('databasePage.chartAxisCm', 'См') },
+          grid: { color: 'rgba(148,163,184,0.2)' },
+        },
+      },
+    }),
+    [t],
+  );
+
+  const openStationHistory = (post) => {
+    setSelectedPost(post);
+    setHistoryOpen(true);
+  };
+
+  const data = {
+    ...STATIC_DATA,
+    activeZones: hydroPostsWithState.length,
+    avgWaterLevel: hydroSummary.avgLevelM,
+    maxWaterLevel: hydroSummary.maxLevelM,
+    currentStatus: {
+      ...STATIC_DATA.currentStatus,
+      avgWaterLevel: hydroSummary.sumExceedM,
+      feelsLike: hydroSummary.sumExceedM,
+      change24h: 0,
+      maxLevel: hydroSummary.maxLevelM,
+      minLevel: hydroSummary.minLevelM,
+      criticalZones: hydroSummary.dangerCount,
+      activeZones: hydroPostsWithState.length,
+    },
+  };
   const status = data.currentStatus;
 
   const [showInstructionDialog, setShowInstructionDialog] = useState(false);
-
   useEffect(() => {
-    // Проверяем, был ли это первый вход пользователя
-    const hasSeenPrompt = localStorage.getItem('hasSeenInstructionPrompt');
-    
-    if (!hasSeenPrompt) {
-      // Показываем диалог при первом входе
-      setShowInstructionDialog(true);
-    }
+    if (!localStorage.getItem('hasSeenInstructionPrompt')) setShowInstructionDialog(true);
   }, []);
-
   const handleOpenInstruction = () => {
-    // Сохраняем флаг, что пользователь видел предложение
     localStorage.setItem('hasSeenInstructionPrompt', 'true');
     setShowInstructionDialog(false);
-    // Перенаправляем на страницу инструкций
     navigate('/app/instruction');
   };
-
   const handleCloseDialog = () => {
-    // Сохраняем флаг, что пользователь видел предложение
     localStorage.setItem('hasSeenInstructionPrompt', 'true');
     setShowInstructionDialog(false);
   };
 
+  const METRICS = [
+    { icon: WarningIcon,    titleKey: 'activeZones',    descKey: 'zonesUnderMonitoring',       value: hydroPostsWithState.length, unitKey: null, color: '#10B981', decimals: 0, delay: 200 },
+    { icon: PublicIcon,     titleKey: 'riskArea',        descKey: 'riskAreaDescription',        value: data.totalArea,         unitKey: 'km2', color: '#F59E0B', decimals: 1, delay: 250 },
+    { icon: PeopleIcon,     titleKey: 'population',      descKey: 'populationDescription',      value: data.populationAtRisk,  unitKey: null,  color: '#EF4444', decimals: 0, delay: 300 },
+    { icon: HomeIcon,       titleKey: 'buildings',       descKey: 'buildingsDescription',       value: data.affectedBuildings, unitKey: null,  color: '#0EA5E9', decimals: 0, delay: 350 },
+    { icon: WaterDropIcon,  titleKey: 'waterLevel',      descKey: 'waterLevelDescription',      value: data.avgWaterLevel,     unitKey: 'm',   color: '#0077B6', decimals: 1, delay: 400 },
+    { icon: TrendingUpIcon, titleKey: 'maxLevel',        descKey: 'maxLevelDescription',        value: data.maxWaterLevel,     unitKey: 'm',   color: '#EF4444', decimals: 1, delay: 450 },
+    { icon: SpeedIcon,      titleKey: 'currentVelocity', descKey: 'currentVelocityDescription', value: data.currentVelocity,   unitKey: 'ms',  color: '#F59E0B', decimals: 1, delay: 500 },
+    { icon: AccessTimeIcon, titleKey: 'timeToPeak',      descKey: 'timeToPeakDescription',      value: data.timeToPeak,        unitKey: 'h',   color: '#8B5CF6', decimals: 0, delay: 550 },
+  ];
+
   return (
-    <PageContainer>
-      <Box sx={{ 
-        height: '100%',
+    <>
+      <GlobalStyles styles={{
+        '@keyframes wxFadeUp': {
+          from: { opacity: 0, transform: 'translateY(20px)' },
+          to:   { opacity: 1, transform: 'translateY(0)' },
+        },
+        '@keyframes wxPulse': {
+          '0%,100%': { opacity: 0.8 },
+          '50%':     { opacity: 1 },
+        },
+      }} />
+
+      {/* ── Полноэкранный контейнер ── */}
+      <Box sx={{
+        width: '100%',
+        height: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
+        p: { xs: 1.5, sm: 2 },
+        boxSizing: 'border-box',
+        bgcolor: '#F0F4F8',
+        overflow: 'auto',
       }}>
-        <Typography variant="h4" sx={{ mb: 2, fontWeight: 'bold' }}>
+
+        {/* Заголовок */}
+        <Typography sx={{
+          mb: { xs: 1, sm: 1.5 },
+          fontWeight: 800, color: '#111827',
+          fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.75rem' },
+          flexShrink: 0,
+        }}>
           {t('pageTitles.dashboard')}
         </Typography>
-        <Grid container spacing={1.5} sx={{ flexGrow: 1 }}>
-        {/* Большая карточка слева - Основная сводка */}
-        <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
-          <Card
-            sx={{
-              borderRadius: 3,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              bgcolor: 'white',
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                <Box>
-                  <Typography variant="h2" sx={{ fontWeight: 'bold', mb: 0.5, color: 'text.primary' }}>
-                    <AnimatedNumber value={status.avgWaterLevel} decimals={1} suffix={t('dashboard.m')} />
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {t('dashboard.averageWaterLevel')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.feelsLike')}: <AnimatedNumber value={status.feelsLike} decimals={1} suffix={t('dashboard.m')} />
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {t('dashboard.change24h')}: <AnimatedNumber value={status.change24h} decimals={1} suffix={t('dashboard.m')} showSign={true} />
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1 }}>
-                    <WaterDropIcon sx={{ fontSize: 40, color: '#2196f3', mr: 1 }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+
+        {/* Основная сетка: 2 строки по 1fr — заполняет весь оставшийся экран */}
+        <Box sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'grid',
+          gridTemplateRows: { xs: 'auto auto', md: '1fr 1fr' },
+          gap: { xs: 1.5, sm: 2 },
+        }}>
+
+          {/* ── Строка 1: Hero + Активные зоны ── */}
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' },
+            gap: { xs: 1.5, sm: 2 },
+            minHeight: 0,
+          }}>
+
+            {/* HERO CARD */}
+            <Box sx={{
+              borderRadius: '24px',
+              background: 'linear-gradient(145deg, #023E8A 0%, #0077B6 60%, #0096C7 100%)',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: '0 8px 32px rgba(0,119,182,0.35)',
+              animation: 'wxFadeUp 0.4s ease both',
+              transition: 'transform 0.25s, box-shadow 0.25s',
+              '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 16px 40px rgba(0,119,182,0.45)' },
+              position: 'relative', overflow: 'hidden', color: '#fff', minHeight: 0,
+            }}>
+              <Box sx={{ position: 'absolute', top: -60, right: -40, width: 220, height: 220, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.05)' }} />
+              <Box sx={{ position: 'absolute', bottom: -50, left: -30, width: 180, height: 180, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography sx={{ fontSize: { xs: 10, sm: 11 }, fontWeight: 700, opacity: 0.65, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 0.75 }}>
                       {t('dashboard.flooding')}
                     </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <Typography sx={{ fontSize: { xs: 40, sm: 52, md: 64 }, fontWeight: 900, lineHeight: 1, color: '#fff' }}>
+                        <AnimatedNumber value={status.avgWaterLevel} decimals={1} />
+                      </Typography>
+                      <Typography sx={{ fontSize: { xs: 16, sm: 20, md: 24 }, fontWeight: 400, opacity: 0.8, mt: { xs: 0.75, sm: 1.25 }, ml: 0.5 }}>
+                        {t('dashboard.m')}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: { xs: 11, sm: 13 }, opacity: 0.7, mt: 0.5 }}>
+                      {t('dashboard.averageWaterLevel')}
+                    </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.max')}: <AnimatedNumber value={status.maxLevel} decimals={1} suffix={t('dashboard.m')} />
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.min')}: <AnimatedNumber value={status.minLevel} decimals={1} suffix={t('dashboard.m')} />
-                  </Typography>
+                  <Box sx={{
+                    width: { xs: 48, sm: 58, md: 68 }, height: { xs: 48, sm: 58, md: 68 },
+                    borderRadius: { xs: '14px', md: '18px' },
+                    bgcolor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    animation: 'wxPulse 3s ease-in-out infinite', flexShrink: 0,
+                  }}>
+                    <WaterDropIcon sx={{ fontSize: { xs: 26, sm: 30, md: 36 }, color: '#fff' }} />
+                  </Box>
                 </Box>
-              </Box>
-              
-              <Divider sx={{ my: 1.5 }} />
 
-              <Grid container spacing={1.5}>
-                <Grid size={{ xs: 6, sm: 4 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                      <WarningIcon sx={{ fontSize: 18, color: 'error.main', mr: 0.5 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {t('dashboard.criticalZones')}
+                <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2.5 }, flexWrap: 'wrap' }}>
+                  {[
+                    { label: t('dashboard.feelsLike'), value: status.feelsLike,  decimals: 1, unit: t('dashboard.m'), color: '#fff' },
+                    { label: t('dashboard.change24h'), value: status.change24h,  decimals: 1, unit: t('dashboard.m'), color: '#86EFAC', showSign: true },
+                    { label: t('dashboard.max'),        value: status.maxLevel,  decimals: 1, unit: t('dashboard.m'), color: '#FCA5A5' },
+                    { label: t('dashboard.min'),        value: status.minLevel,  decimals: 1, unit: t('dashboard.m'), color: '#93C5FD' },
+                  ].map(({ label, value, decimals, unit, color, showSign }, i) => (
+                    <Box key={i}>
+                      <Typography sx={{ fontSize: { xs: 9, sm: 10 }, opacity: 0.6, mb: 0.15 }}>{label}</Typography>
+                      <Typography sx={{ fontSize: { xs: 13, sm: 15, md: 16 }, fontWeight: 700, color }}>
+                        <AnimatedNumber value={value} decimals={decimals} suffix={unit} showSign={!!showSign} />
                       </Typography>
                     </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      <AnimatedNumber value={status.criticalZones} />
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid size={{ xs: 6, sm: 4 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                      <LocationOnIcon sx={{ fontSize: 18, color: 'warning.main', mr: 0.5 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {t('dashboard.activeZones')}
-                      </Typography>
-                    </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      <AnimatedNumber value={status.activeZones} />
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                      <TrendingUpIcon sx={{ fontSize: 18, color: 'info.main', mr: 0.5 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {t('dashboard.precipitation')}
-                      </Typography>
-                    </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      <AnimatedNumber value={status.precipitation} decimals={1} suffix={t('dashboard.mm')} />
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
+                  ))}
+                </Box>
 
-        {/* Большая карточка справа - Детальная информация */}
-        <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
-          <Card
-            sx={{
-              borderRadius: 3,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              bgcolor: 'white',
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1.5 }}>
-                {t('dashboard.activeZones')}
-              </Typography>
-              <List sx={{ pt: 0 }}>
-                {data.activeZonesList.slice(0, 3).map((zone, index) => (
-                  <React.Fragment key={zone.id}>
-                    <ListItem sx={{ px: 0, py: 1 }}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <LocationOnIcon sx={{ color: getStatusColor(zone.status) === 'error' ? 'error.main' : 'warning.main' }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {zone.name.split(' ')[1]} {zone.name.split(' ')[2]}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}
-                            component="div"
-                          >
-                            <Typography variant="caption" color="text.secondary">
-                              <AnimatedNumber value={zone.waterLevel} decimals={1} suffix=" м" />
-                            </Typography>
-                            <Chip
-                              label={zone.status}
-                              size="small"
-                              color={getStatusColor(zone.status)}
-                              sx={{ height: 20, fontSize: '0.7rem' }}
-                            />
-                          </Box>
-                        }
-                        secondaryTypographyProps={{
-                          component: 'div',
-                        }}
-                      />
-                    </ListItem>
-                    {index < 2 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-              <Box sx={{ mt: 'auto', pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t('dashboard.showAllZones')}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Сетка из 8 маленьких карточек метрик */}
-        <Grid size={{ xs: 12 }}>
-          <Grid container spacing={1.5}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={WarningIcon}
-                title={t('dashboard.activeZones')}
-                value={data.activeZones}
-                description={t('dashboard.zonesUnderMonitoring')}
-                iconColor="#f44336"
-                decimals={0}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={PublicIcon}
-                title={t('dashboard.riskArea')}
-                value={data.totalArea}
-                unit={t('dashboard.km2')}
-                description={t('dashboard.riskAreaDescription')}
-                iconColor="#ff9800"
-                decimals={1}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={PeopleIcon}
-                title={t('dashboard.population')}
-                value={data.populationAtRisk}
-                description={t('dashboard.populationDescription')}
-                iconColor="#f44336"
-                decimals={0}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={HomeIcon}
-                title={t('dashboard.buildings')}
-                value={data.affectedBuildings}
-                description={t('dashboard.buildingsDescription')}
-                iconColor="#2196f3"
-                decimals={0}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={WaterDropIcon}
-                title={t('dashboard.waterLevel')}
-                value={data.avgWaterLevel}
-                unit={t('dashboard.m')}
-                description={t('dashboard.waterLevelDescription')}
-                iconColor="#00bcd4"
-                decimals={1}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={TrendingUpIcon}
-                title={t('dashboard.maxLevel')}
-                value={data.maxWaterLevel}
-                unit={t('dashboard.m')}
-                description={t('dashboard.maxLevelDescription')}
-                iconColor="#f44336"
-                decimals={1}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={SpeedIcon}
-                title={t('dashboard.currentVelocity')}
-                value={data.currentVelocity}
-                unit={t('dashboard.ms')}
-                description={t('dashboard.currentVelocityDescription')}
-                iconColor="#ff9800"
-                decimals={1}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <SmallMetricCard
-                icon={AccessTimeIcon}
-                title={t('dashboard.timeToPeak')}
-                value={data.timeToPeak}
-                unit={t('dashboard.h')}
-                description={t('dashboard.timeToPeakDescription')}
-                iconColor="#00bcd4"
-                decimals={0}
-              />
-            </Grid>
-          </Grid>
-        </Grid>
-
-        {/* Детальная информация о критических объектах */}
-        <Grid size={{ xs: 12 }}>
-          <Card
-            sx={{
-              borderRadius: 3,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              bgcolor: 'white',
-              width: '100%',
-            }}
-          >
-            <CardContent sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <WarningIcon sx={{ fontSize: 28, color: 'error.main', mr: 1.5 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {t('dashboard.criticalObjects')} (<AnimatedNumber value={data.criticalObjects} />)
-                </Typography>
-              </Box>
-              <Divider sx={{ mb: 1.5 }} />
-              <Grid container spacing={1.5}>
-                {data.criticalObjectsList.map((obj) => (
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }} key={obj.id}>
-                    <Box
-                      sx={{
-                        p: 1.5,
-                        border: 1,
-                        borderColor: 'divider',
-                        borderRadius: 2,
-                        '&:hover': { bgcolor: 'action.hover' },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        {getObjectIcon(obj.type)}
-                        <Typography variant="body2" sx={{ fontWeight: 500, ml: 1 }}>
-                          {obj.name}
+                <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, pt: { xs: 1.5, sm: 2 }, borderTop: '1px solid rgba(255,255,255,0.18)', flexWrap: 'wrap' }}>
+                  {[
+                    { icon: WarningIcon,    label: t('dashboard.criticalZones'), value: status.criticalZones, decimals: 0, color: '#FCA5A5' },
+                    { icon: LocationOnIcon, label: t('dashboard.activeZones'),   value: status.activeZones,   decimals: 0, color: '#FDE68A' },
+                    { icon: TrendingUpIcon, label: t('dashboard.precipitation'), value: status.precipitation, decimals: 1, unit: t('dashboard.mm'), color: '#93C5FD' },
+                  ].map(({ icon: ItemIcon, label, value, decimals, unit, color }, i) => (
+                    <Box key={i} sx={{
+                      display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1 },
+                      bgcolor: 'rgba(255,255,255,0.12)', borderRadius: '12px',
+                      px: { xs: 1, sm: 1.5 }, py: { xs: 0.75, sm: 1 },
+                      flex: 1, minWidth: { xs: 85, sm: 100 },
+                    }}>
+                      <ItemIcon sx={{ fontSize: { xs: 14, sm: 16 }, color, flexShrink: 0 }} />
+                      <Box>
+                        <Typography sx={{ fontSize: { xs: 9, sm: 10 }, opacity: 0.65, lineHeight: 1 }}>{label}</Typography>
+                        <Typography sx={{ fontSize: { xs: 12, sm: 14 }, fontWeight: 700, color, lineHeight: 1.3 }}>
+                          <AnimatedNumber value={value} decimals={decimals} suffix={unit || ''} />
                         </Typography>
                       </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        {obj.zone}
-                      </Typography>
-                      <Chip
-                        label={obj.status}
-                        size="small"
-                        color={getStatusColor(obj.status)}
-                        sx={{ height: 20 }}
-                      />
                     </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* ACTIVE ZONES CARD */}
+            <Box sx={{
+              borderRadius: '24px', bgcolor: '#fff',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+              display: 'flex', flexDirection: 'column',
+              animation: 'wxFadeUp 0.4s ease both', animationDelay: '80ms',
+              transition: 'transform 0.25s, box-shadow 0.25s',
+              '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 28px rgba(0,0,0,0.1)' },
+              position: 'relative', overflow: 'hidden', minHeight: 0,
+              '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #EF4444, #F59E0B)' },
+            }}>
+              <Box sx={{ p: { xs: 2, sm: 2.5 }, flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1, sm: 1.5 }, flexShrink: 0 }}>
+                  <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    {t('dashboard.hydroPosts', 'Гидрологические посты')}
+                  </Typography>
+                  <Box sx={{ bgcolor: '#ECFDF5', borderRadius: '8px', px: 1, py: 0.25 }}>
+                    <Typography sx={{ fontSize: { xs: 11, sm: 12 }, fontWeight: 700, color: '#10B981' }}>
+                      {hydroPosts.length}
+                    </Typography>
+                  </Box>
+                </Box>
+                <List sx={{ pt: 0, flex: 1, minHeight: 0, overflow: 'auto' }}>
+                  {hydroPostsWithState.map((post, index) => {
+                    const hex = post.isDanger ? '#DC2626' : '#10B981';
+                    const chipLabel = post.isDanger
+                      ? t('dashboard.danger', 'Опасность')
+                      : t('dashboard.monitoring', 'Мониторинг');
+                    const chipColor = post.isDanger ? 'error' : 'info';
+                    return (
+                      <React.Fragment key={post.id}>
+                        <ListItem
+                          onClick={() => openStationHistory(post)}
+                          sx={{
+                            px: 0,
+                            py: { xs: 0.75, sm: 1 },
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            borderRadius: '10px',
+                            transition: 'background-color 0.15s ease',
+                            '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.04)' },
+                          }}
+                        >
+                          <Box sx={{ width: { xs: 32, sm: 36 }, height: { xs: 32, sm: 36 }, borderRadius: '10px', bgcolor: `${hex}16`, display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1.5, flexShrink: 0 }}>
+                            <LocationOnIcon sx={{ fontSize: { xs: 16, sm: 18 }, color: hex }} />
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography sx={{ fontSize: { xs: 12, sm: 13 }, fontWeight: 600, color: '#111827', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {post.name}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
+                              <Typography sx={{ fontSize: { xs: 11, sm: 12 }, color: '#6B7280' }}>
+                                {post.code}
+                              </Typography>
+                              <Chip label={chipLabel} size="small" color={chipColor} sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600 }} />
+                            </Box>
+                          </Box>
+                        </ListItem>
+                        {index < hydroPostsWithState.length - 1 && <Divider sx={{ opacity: 0.4 }} />}
+                      </React.Fragment>
+                    );
+                  })}
+                  {hydroPostsWithState.length === 0 && (
+                    <Typography sx={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', py: 2 }}>
+                      {t('dashboard.loadingPosts', 'Загрузка...')}
+                    </Typography>
+                  )}
+                </List>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* ── Строка 2: 8 метрических карточек (4×2) ── */}
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gridTemplateRows: { xs: 'repeat(4, 1fr)', sm: 'repeat(2, 1fr)' },
+            gap: { xs: 1.5, sm: 2 },
+            minHeight: 0,
+          }}>
+            {METRICS.map(({ icon, titleKey, descKey, value, unitKey, color, decimals, delay }) => (
+              <SmallMetricCard
+                key={titleKey}
+                icon={icon}
+                title={t(`dashboard.${titleKey}`)}
+                value={value}
+                unit={unitKey ? t(`dashboard.${unitKey}`) : undefined}
+                description={t(`dashboard.${descKey}`)}
+                iconColor={color}
+                decimals={decimals}
+                delay={delay}
+              />
+            ))}
+          </Box>
+
+        </Box>
       </Box>
 
-      {/* Диалог для первого входа */}
-      <Dialog
+      <BaseModal
         open={showInstructionDialog}
         onClose={handleCloseDialog}
-        aria-labelledby="instruction-dialog-title"
-        aria-describedby="instruction-dialog-description"
+        title={t('dashboard.instructionDialog.title', 'Добро пожаловать!')}
+        confirmText={t('dashboard.instructionDialog.open', 'Открыть инструкции')}
+        onConfirm={handleOpenInstruction}
+        cancelText={t('dashboard.instructionDialog.cancel', 'Позже')}
+        onCancel={handleCloseDialog}
       >
-        <DialogTitle id="instruction-dialog-title">
-          {t('dashboard.instructionDialog.title', 'Добро пожаловать!')}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="instruction-dialog-description">
-            {t('dashboard.instructionDialog.message', 'Хотите открыть страницу с инструкциями?')}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            {t('dashboard.instructionDialog.cancel', 'Позже')}
-          </Button>
-          <Button onClick={handleOpenInstruction} color="primary" variant="contained" autoFocus>
-            {t('dashboard.instructionDialog.open', 'Открыть инструкции')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </PageContainer>
+        <Typography variant="body1" color="text.secondary">
+          {t('dashboard.instructionDialog.message', 'Хотите открыть страницу с инструкциями?')}
+        </Typography>
+      </BaseModal>
+
+      <BaseModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title={selectedPost ? `${selectedPost.name} (${selectedPost.code})` : t('dashboard.hydroPostHistory', 'История гидропоста')}
+        maxWidth="lg"
+        fullWidth
+        contentSx={{ minHeight: 420 }}
+      >
+        {historyLoading ? (
+          <Box sx={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CircularProgress size={30} />
+          </Box>
+        ) : historyError ? (
+          <Typography color="error.main">{historyError}</Typography>
+        ) : hydroLineData ? (
+          <Box sx={{ height: 360 }}>
+            <Line data={hydroLineData} options={hydroLineOptions} />
+          </Box>
+        ) : (
+          <Typography color="text.secondary">
+            {t('dashboard.noHistoryData', 'Нет данных для выбранного поста')}
+          </Typography>
+        )}
+      </BaseModal>
+    </>
   );
 }

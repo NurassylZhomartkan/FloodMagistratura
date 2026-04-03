@@ -11,11 +11,17 @@ body,
 
 * {
   box-sizing: border-box;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / Edge (Chromium) */
 }
 
 /* При необходимости переопределите цвет фона, но т.к. у нас Login/Register сами рисуют фон, здесь можно оставить нейтральный */
 body {
-  background-color: #fff; 
+  background-color: #F0F4F8; 
 }
 
 /* Скрытие скроллбара для элементов с классом no-scrollbar */

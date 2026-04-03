@@ -1915,8 +1915,8 @@ export default function HecRasViewer({ projectHash: propProjectHash, shareHash: 
             bottom: 20,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '60%',
-            maxWidth: 600,
+            width: '70%',
+            maxWidth: 750,
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -1945,14 +1945,7 @@ export default function HecRasViewer({ projectHash: propProjectHash, shareHash: 
           </IconButton>
           
           {/* Слайдер */}
-          <Box
-            sx={{
-              width: 400,
-              flexShrink: 0,
-              flexGrow: 0,
-              px: 2,
-            }}
-          >
+          <Box sx={{ flex: 1, minWidth: 0, px: 1 }}>
             <Slider
               id="time-range-slider"
               min={0}
@@ -1964,7 +1957,6 @@ export default function HecRasViewer({ projectHash: propProjectHash, shareHash: 
                 if (newTime) {
                   setCurrentTime(newTime);
                 }
-                // Остановить анимацию при ручной навигации
                 if (timePlayIntervalRef.current) {
                   clearInterval(timePlayIntervalRef.current);
                   timePlayIntervalRef.current = null;
@@ -1974,15 +1966,19 @@ export default function HecRasViewer({ projectHash: propProjectHash, shareHash: 
               marks={false}
             />
           </Box>
-          
-          {/* Отображение времени справа */}
+
+          {/* Метка времени — справа от слайдера, фиксированная ширина */}
           {currentTime && (
             <Typography
               sx={{
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                ml: 1.5,
+                flexGrow: 0,
+                fontSize: '0.85rem',
+                width: 190,
+                minWidth: 190,
+                textAlign: 'right',
               }}
             >
               {`${t('hecRasViewer.timeLabel')} ${currentTime}`}

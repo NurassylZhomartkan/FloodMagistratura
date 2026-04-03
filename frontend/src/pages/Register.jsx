@@ -100,28 +100,12 @@ export default function Register() {
     }
   }, [t, navigate]);
 
-  const inputStyles = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "12px",
-      backgroundColor: "#F9FAFB",
-      "& fieldset": {
-        borderColor: "#E5E7EB",
-      },
-      "&:hover fieldset": {
-        borderColor: "#6366F1",
-      },
-      "&.Mui-focused fieldset": {
-        borderColor: "#6366F1",
-      },
-    },
-  };
-
   return (
     <Box
       sx={{
         height: "100vh",
         display: "flex",
-        backgroundColor: "#F5F5F5",
+        bgcolor: "background.default",
       }}
     >
       {/* Левая часть - форма */}
@@ -133,7 +117,7 @@ export default function Register() {
           alignItems: "center",
           justifyContent: "center",
           padding: 4,
-          backgroundColor: "#FFFFFF",
+          bgcolor: "background.paper",
           overflowY: "auto",
         }}
       >
@@ -153,7 +137,7 @@ export default function Register() {
                 width: 40,
                 height: 40,
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -168,7 +152,7 @@ export default function Register() {
               variant="h5"
               sx={{
                 fontWeight: 700,
-                color: "#1F2937",
+                color: "text.primary",
                 letterSpacing: "-0.5px",
               }}
             >
@@ -182,7 +166,7 @@ export default function Register() {
               variant="h4"
               sx={{
                 fontWeight: 700,
-                color: "#111827",
+                color: "text.primary",
                 mb: 1,
               }}
             >
@@ -191,7 +175,7 @@ export default function Register() {
             <Typography
               variant="body1"
               sx={{
-                color: "#6B7280",
+                color: "text.secondary",
                 fontSize: "1rem",
               }}
             >
@@ -209,7 +193,6 @@ export default function Register() {
                 onChange={handleChange}
                 variant="outlined"
                 disabled={isLoading}
-                sx={inputStyles}
               />
               <TextField
                 fullWidth
@@ -220,7 +203,6 @@ export default function Register() {
                 onChange={handleChange}
                 variant="outlined"
                 disabled={isLoading}
-                sx={inputStyles}
               />
               <TextField
                 fullWidth
@@ -231,7 +213,6 @@ export default function Register() {
                 onChange={handleChange}
                 variant="outlined"
                 disabled={isLoading}
-                sx={inputStyles}
               />
               <TextField
                 fullWidth
@@ -244,7 +225,6 @@ export default function Register() {
                 helperText={error}
                 variant="outlined"
                 disabled={isLoading}
-                sx={inputStyles}
               />
               
               {/* Кнопка Sign Up */}
@@ -253,24 +233,7 @@ export default function Register() {
                 fullWidth
                 variant="contained"
                 disabled={isLoading}
-                sx={{
-                  backgroundColor: "#6366F1",
-                  color: "white",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  textTransform: "none",
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
-                  mt: 1,
-                  "&:hover": {
-                    backgroundColor: "#4F46E5",
-                    boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "#9CA3AF",
-                  },
-                }}
+                sx={{ mt: 1, py: '12px' }}
               >
                 {isLoading ? (
                   <CircularProgress size={24} sx={{ color: "white" }} />
@@ -283,7 +246,7 @@ export default function Register() {
               <Box sx={{ textAlign: "center", mt: 1 }}>
                 <Typography
                   sx={{
-                    color: "#6B7280",
+                    color: "text.secondary",
                     fontSize: "0.875rem",
                   }}
                 >
@@ -291,14 +254,7 @@ export default function Register() {
                   <MuiLink
                     component={Link}
                     to="/login"
-                    sx={{
-                      color: "#6366F1",
-                      textDecoration: "none",
-                      fontWeight: 600,
-                      "&:hover": {
-                        textDecoration: "underline",
-                      },
-                    }}
+                    sx={{ color: "primary.main", fontWeight: 600 }}
                   >
                     {t('register.signIn')}
                   </MuiLink>
@@ -309,14 +265,15 @@ export default function Register() {
             <Box>
               <Typography
                 sx={{
-                  color: "#10B981",
+                  color: "success.main",
                   fontSize: "1rem",
                   textAlign: "center",
                   mb: 3,
                   padding: 2,
-                  backgroundColor: "#ECFDF5",
+                  bgcolor: "success.light",
                   borderRadius: "12px",
-                  border: "1px solid #10B981",
+                  border: 1,
+                  borderColor: "success.main",
                 }}
               >
                 {message}
@@ -326,20 +283,7 @@ export default function Register() {
                   <Button
                     fullWidth
                     variant="contained"
-                    sx={{
-                      backgroundColor: "#6366F1",
-                      color: "white",
-                      padding: "12px",
-                      borderRadius: "12px",
-                      textTransform: "none",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
-                      "&:hover": {
-                        backgroundColor: "#4F46E5",
-                        boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
-                      },
-                    }}
+                    sx={{ py: '12px' }}
                   >
                     {t('register.goToLogin')}
                   </Button>

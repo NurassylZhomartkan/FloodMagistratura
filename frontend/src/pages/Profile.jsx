@@ -14,15 +14,12 @@ import {
   IconButton,
   Alert,
   Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
   Select,
   MenuItem,
   InputLabel,
 } from '@mui/material';
+import BaseModal from '../components/BaseModal';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -68,6 +65,7 @@ export default function Profile() {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [deleteAvatarDialogOpen, setDeleteAvatarDialogOpen] = useState(false);
 
   // Состояния для настроек карты
   const [mapStyle, setMapStyle] = useState('satellite-streets-v12');
@@ -311,9 +309,12 @@ export default function Profile() {
     }
   };
 
-  const handleAvatarDelete = async () => {
-    if (!window.confirm(t('profile.deleteAvatar'))) return;
+  const handleAvatarDelete = () => {
+    setDeleteAvatarDialogOpen(true);
+  };
 
+  const handleConfirmAvatarDelete = async () => {
+    setDeleteAvatarDialogOpen(false);
     setAvatarLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -530,38 +531,30 @@ export default function Profile() {
                 <FormControlLabel
                   key={lang.code}
                   value={lang.code}
-                  control={
-                    <Radio
-                      sx={{
-                        color: '#6366F1',
-                        '&.Mui-checked': {
-                          color: '#6366F1',
-                        },
-                      }}
-                    />
-                  }
+                  control={<Radio />}
                   label={
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
                         {lang.nativeName}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#6B7280' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         {lang.name}
                       </Typography>
                     </Box>
                   }
                   sx={{
-                    border: '1px solid #E5E7EB',
+                    border: 1,
+                    borderColor: 'divider',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     margin: 0,
                     '&:hover': {
-                      backgroundColor: '#F9FAFB',
-                      borderColor: '#6366F1',
+                      bgcolor: 'action.hover',
+                      borderColor: 'primary.main',
                     },
                     '&.Mui-checked': {
-                      borderColor: '#6366F1',
-                      backgroundColor: '#EEF2FF',
+                      borderColor: 'primary.main',
+                      bgcolor: '#E8F4F8',
                     },
                   }}
                 />
@@ -584,17 +577,6 @@ export default function Profile() {
                 value={mapStyle}
                 label={t('profile.mapStyle')}
                 onChange={(e) => setMapStyle(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#E5E7EB',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#6366F1',
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#6366F1',
-                  },
-                }}
               >
                 <MenuItem value="streets-v12">{t('profile.mapStyles.streets')}</MenuItem>
                 <MenuItem value="satellite-v9">{t('profile.mapStyles.satellite')}</MenuItem>
@@ -603,7 +585,7 @@ export default function Profile() {
                 <MenuItem value="light-v11">{t('profile.mapStyles.light')}</MenuItem>
                 <MenuItem value="dark-v11">{t('profile.mapStyles.dark')}</MenuItem>
               </Select>
-              <Typography variant="body2" sx={{ color: '#6B7280', mt: 1 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                 {t('profile.mapStyleDescription')}
               </Typography>
             </FormControl>
@@ -619,17 +601,6 @@ export default function Profile() {
                   console.log('Projection changed to:', e.target.value);
                   setMapProjection(e.target.value);
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#E5E7EB',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#6366F1',
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#6366F1',
-                  },
-                }}
               >
                 <MenuItem value="mercator">{t('profile.mapProjections.mercator')}</MenuItem>
                 <MenuItem value="globe">{t('profile.mapProjections.globe')}</MenuItem>
@@ -637,7 +608,7 @@ export default function Profile() {
                 <MenuItem value="equalEarth">{t('profile.mapProjections.equalEarth')}</MenuItem>
                 <MenuItem value="naturalEarth">{t('profile.mapProjections.naturalEarth')}</MenuItem>
               </Select>
-              <Typography variant="body2" sx={{ color: '#6B7280', mt: 1 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                 {t('profile.mapProjectionDescription')}
               </Typography>
             </FormControl>
@@ -646,13 +617,7 @@ export default function Profile() {
               variant="contained"
               onClick={handleMapSettingsSave}
               disabled={mapSettingsLoading}
-              sx={{
-                mt: 2,
-                bgcolor: '#6366F1',
-                '&:hover': {
-                  bgcolor: '#4F46E5',
-                },
-              }}
+              sx={{ mt: 2 }}
             >
               {mapSettingsLoading ? <CircularProgress size={20} /> : t('profile.save')}
             </Button>
@@ -661,127 +626,103 @@ export default function Profile() {
       </Box>
 
       {/* Диалог изменения email */}
-      <Dialog 
-        open={emailDialogOpen} 
-        onClose={() => {
-          setEmailDialogOpen(false);
-          setNewEmail('');
-          setVerificationCode('');
-          setCodeSent(false);
-        }} 
-        maxWidth="sm" 
-        fullWidth
+      <BaseModal
+        open={emailDialogOpen}
+        onClose={() => { setEmailDialogOpen(false); setNewEmail(''); setVerificationCode(''); setCodeSent(false); }}
+        title={t('profile.changeEmail')}
+        confirmText={!codeSent ? t('profile.sendCode') : t('profile.confirm')}
+        onConfirm={!codeSent ? handleRequestEmailChange : handleVerifyEmailChange}
+        confirmLoading={emailLoading}
+        confirmDisabled={!codeSent ? !newEmail : (!verificationCode || verificationCode.length !== 6)}
+        cancelText={t('profile.cancel')}
+        onCancel={() => { setEmailDialogOpen(false); setNewEmail(''); setVerificationCode(''); setCodeSent(false); }}
       >
-        <DialogTitle>{t('profile.changeEmail')}</DialogTitle>
-        <DialogContent>
-          {!codeSent ? (
+        {!codeSent ? (
+          <TextField
+            fullWidth
+            label={t('profile.newEmail')}
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            sx={{ mt: 2 }}
+            helperText={t('profile.emailConfirmationHelper')}
+            disabled={emailLoading}
+          />
+        ) : (
+          <>
             <TextField
               fullWidth
               label={t('profile.newEmail')}
               type="email"
               value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
               sx={{ mt: 2 }}
-              helperText={t('profile.emailConfirmationHelper')}
+              disabled
+            />
+            <TextField
+              fullWidth
+              label={t('profile.verificationCode')}
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              sx={{ mt: 2 }}
+              helperText={t('profile.verificationCodeHelper')}
+              inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '24px', letterSpacing: '8px' } }}
               disabled={emailLoading}
             />
-          ) : (
-            <>
-              <TextField
-                fullWidth
-                label={t('profile.newEmail')}
-                type="email"
-                value={newEmail}
-                sx={{ mt: 2 }}
-                disabled
-              />
-              <TextField
-                fullWidth
-                label={t('profile.verificationCode')}
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                sx={{ mt: 2 }}
-                helperText={t('profile.verificationCodeHelper')}
-                inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '24px', letterSpacing: '8px' } }}
-                disabled={emailLoading}
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setEmailDialogOpen(false);
-              setNewEmail('');
-              setVerificationCode('');
-              setCodeSent(false);
-            }}
-            disabled={emailLoading}
-          >
-            {t('profile.cancel')}
-          </Button>
-          {!codeSent ? (
-            <Button
-              onClick={handleRequestEmailChange}
-              variant="contained"
-              disabled={emailLoading || !newEmail}
-            >
-              {emailLoading ? <CircularProgress size={20} /> : t('profile.sendCode')}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleVerifyEmailChange}
-              variant="contained"
-              disabled={emailLoading || !verificationCode || verificationCode.length !== 6}
-            >
-              {emailLoading ? <CircularProgress size={20} /> : t('profile.confirm')}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+          </>
+        )}
+      </BaseModal>
 
       {/* Диалог изменения пароля */}
-      <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('profile.changePassword')}</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label={t('profile.currentPassword')}
-            type="password"
-            value={passwordForm.current}
-            onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
-            sx={{ mt: 2 }}
-          />
-          <TextField
-            fullWidth
-            label={t('profile.newPassword')}
-            type="password"
-            value={passwordForm.new}
-            onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-            sx={{ mt: 2 }}
-            helperText={t('profile.passwordMinLength')}
-          />
-          <TextField
-            fullWidth
-            label={t('profile.confirmPassword')}
-            type="password"
-            value={passwordForm.confirm}
-            onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPasswordDialogOpen(false)}>{t('profile.cancel')}</Button>
-          <Button
-            onClick={handlePasswordChange}
-            variant="contained"
-            disabled={passwordLoading || !passwordForm.current || !passwordForm.new || !passwordForm.confirm}
-          >
-            {passwordLoading ? <CircularProgress size={20} /> : t('profile.change')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <BaseModal
+        open={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+        title={t('profile.changePassword')}
+        confirmText={t('profile.change')}
+        onConfirm={handlePasswordChange}
+        confirmLoading={passwordLoading}
+        confirmDisabled={!passwordForm.current || !passwordForm.new || !passwordForm.confirm}
+        cancelText={t('profile.cancel')}
+      >
+        <TextField
+          fullWidth
+          label={t('profile.currentPassword')}
+          type="password"
+          value={passwordForm.current}
+          onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
+          sx={{ mt: 2 }}
+        />
+        <TextField
+          fullWidth
+          label={t('profile.newPassword')}
+          type="password"
+          value={passwordForm.new}
+          onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
+          sx={{ mt: 2 }}
+          helperText={t('profile.passwordMinLength')}
+        />
+        <TextField
+          fullWidth
+          label={t('profile.confirmPassword')}
+          type="password"
+          value={passwordForm.confirm}
+          onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+          sx={{ mt: 2 }}
+        />
+      </BaseModal>
+
+      {/* Диалог удаления аватара */}
+      <BaseModal
+        open={deleteAvatarDialogOpen}
+        onClose={() => setDeleteAvatarDialogOpen(false)}
+        title={t('profile.deleteAvatar')}
+        confirmText={t('profile.delete') || 'Удалить'}
+        onConfirm={handleConfirmAvatarDelete}
+        confirmColor="error"
+        cancelText={t('profile.cancel')}
+      >
+        <Typography>{t('profile.deleteAvatarConfirm') || 'Вы уверены, что хотите удалить аватар?'}</Typography>
+      </BaseModal>
 
       {/* Snackbar для уведомлений */}
       <Snackbar

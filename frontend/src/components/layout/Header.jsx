@@ -11,7 +11,7 @@ const DRAWER_WIDTH = 240;
 const AppBar = styled(MuiAppBar, { shouldForwardProp: (p) => p !== 'open' })(
   ({ theme, open }) => ({
     zIndex: theme.zIndex.drawer + 1,
-    background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+    background: 'linear-gradient(135deg, #0077B6 0%, #48CAE4 100%)',
     color: '#FFFFFF',
     boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
     transition: theme.transitions.create(['width', 'margin'], {

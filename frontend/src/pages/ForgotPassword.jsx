@@ -62,28 +62,12 @@ export default function ForgotPassword() {
     }
   }, [email, t]);
 
-  const inputStyles = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "12px",
-      backgroundColor: "#F9FAFB",
-      "& fieldset": {
-        borderColor: "#E5E7EB",
-      },
-      "&:hover fieldset": {
-        borderColor: "#6366F1",
-      },
-      "&.Mui-focused fieldset": {
-        borderColor: "#6366F1",
-      },
-    },
-  };
-
   return (
     <Box
       sx={{
         height: "100vh",
         display: "flex",
-        backgroundColor: "#F5F5F5",
+        bgcolor: "background.default",
       }}
     >
       {/* Левая часть - форма */}
@@ -95,7 +79,7 @@ export default function ForgotPassword() {
           alignItems: "center",
           justifyContent: "center",
           padding: 4,
-          backgroundColor: "#FFFFFF",
+          bgcolor: "background.paper",
         }}
       >
         <Box
@@ -114,7 +98,7 @@ export default function ForgotPassword() {
                 width: 40,
                 height: 40,
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -129,7 +113,7 @@ export default function ForgotPassword() {
               variant="h5"
               sx={{
                 fontWeight: 700,
-                color: "#1F2937",
+                color: "text.primary",
                 letterSpacing: "-0.5px",
               }}
             >
@@ -143,7 +127,7 @@ export default function ForgotPassword() {
               variant="h4"
               sx={{
                 fontWeight: 700,
-                color: "#111827",
+                color: "text.primary",
                 mb: 1,
               }}
             >
@@ -152,7 +136,7 @@ export default function ForgotPassword() {
             <Typography
               variant="body1"
               sx={{
-                color: "#6B7280",
+                color: "text.secondary",
                 fontSize: "1rem",
               }}
             >
@@ -174,7 +158,6 @@ export default function ForgotPassword() {
                 helperText={error}
                 disabled={loading}
                 variant="outlined"
-                sx={inputStyles}
               />
 
               {/* Кнопка Submit */}
@@ -183,24 +166,7 @@ export default function ForgotPassword() {
                 fullWidth
                 variant="contained"
                 disabled={loading}
-                sx={{
-                  backgroundColor: "#6366F1",
-                  color: "white",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  textTransform: "none",
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
-                  mt: 1,
-                  "&:hover": {
-                    backgroundColor: "#4F46E5",
-                    boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "#9CA3AF",
-                  },
-                }}
+                sx={{ py: '12px', mt: 1 }}
               >
                 {loading ? t('forgotPassword.sending') : t('forgotPassword.submit')}
               </Button>
@@ -211,13 +177,10 @@ export default function ForgotPassword() {
                   component={Link}
                   to="/login"
                   sx={{
-                    color: "#6366F1",
+                    color: "primary.main",
                     textDecoration: "none",
                     fontSize: "0.875rem",
                     fontWeight: 500,
-                    "&:hover": {
-                      textDecoration: "underline",
-                    },
                   }}
                 >
                   {t('forgotPassword.backToLogin')}
@@ -228,14 +191,15 @@ export default function ForgotPassword() {
             <Box>
               <Typography
                 sx={{
-                  color: "#10B981",
+                  color: "success.main",
                   fontSize: "1rem",
                   textAlign: "center",
                   mb: 3,
                   padding: 2,
-                  backgroundColor: "#ECFDF5",
+                  bgcolor: "success.light",
                   borderRadius: "12px",
-                  border: "1px solid #10B981",
+                  border: 1,
+                  borderColor: "success.main",
                 }}
               >
                 {message}
@@ -245,20 +209,7 @@ export default function ForgotPassword() {
                   <Button
                     fullWidth
                     variant="contained"
-                    sx={{
-                      backgroundColor: "#6366F1",
-                      color: "white",
-                      padding: "12px",
-                      borderRadius: "12px",
-                      textTransform: "none",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      boxShadow: "0 4px 14px 0 rgba(99, 102, 241, 0.39)",
-                      "&:hover": {
-                        backgroundColor: "#4F46E5",
-                        boxShadow: "0 6px 20px 0 rgba(99, 102, 241, 0.5)",
-                      },
-                    }}
+                    sx={{ py: '12px', mt: 1 }}
                   >
                     {t('forgotPassword.backToLogin')}
                   </Button>

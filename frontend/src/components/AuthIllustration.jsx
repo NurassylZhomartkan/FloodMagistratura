@@ -25,7 +25,7 @@ export default function AuthIllustration() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.7) 0%, rgba(59, 130, 246, 0.6) 100%)',
+          background: 'linear-gradient(135deg, rgba(0, 77, 153, 0.75) 0%, rgba(0, 180, 216, 0.65) 100%)',
           zIndex: 1,
         },
       }}

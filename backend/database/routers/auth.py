@@ -112,12 +112,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     description="Аутентифицирует пользователя по имени пользователя и паролю. Возвращает JWT токен для доступа к защищенным эндпоинтам. Требует подтвержденный email."
 )
 def login(
-    # Для документации FastAPI будет использовать схему UserLogin.
-    # Для реальной работы эндпоинта - зависимость OAuth2PasswordRequestForm.
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    remember_me: bool = Form(False),
     db: Session = Depends(get_db)
 ):
-    # Логика остается той же, что и раньше
     user = crud.get_user_by_username(db, form_data.username)
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
@@ -133,7 +131,9 @@ def login(
             detail="Please verify your email before logging in",
         )
     
-    token = create_access_token({"sub": user.username})
+    # Если remember_me — токен на 30 дней, иначе — на 60 минут (по умолчанию)
+    expire_minutes = 30 * 24 * 60 if remember_me else None
+    token = create_access_token({"sub": user.username}, expires_delta=expire_minutes)
     return {"access_token": token, "token_type": "bearer"}
 # ↑↑↑↑↑↑ ИЗМЕНЕНИЯ ЗДЕСЬ ↑↑↑↑↑↑
 

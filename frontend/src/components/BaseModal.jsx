@@ -5,28 +5,41 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Button,
   Box,
+  CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 /**
- * Базовый компонент для всплывающих окон (модальных окон)
- * 
- * @param {boolean} open - Открыто ли модальное окно
- * @param {function} onClose - Функция закрытия модального окна
- * @param {string} title - Заголовок модального окна
- * @param {React.ReactNode} children - Содержимое модального окна
- * @param {React.ReactNode} actions - Действия (кнопки) в нижней части модального окна
- * @param {string} maxWidth - Максимальная ширина ('xs' | 'sm' | 'md' | 'lg' | 'xl' | false)
- * @param {boolean} fullWidth - Занимать ли всю доступную ширину
- * @param {boolean} showCloseButton - Показывать ли кнопку закрытия в заголовке
- * @param {boolean} disableEscapeKeyDown - Отключить закрытие по Escape
- * @param {boolean} disableBackdropClick - Отключить закрытие при клике на фон
- * @param {object} titleSx - Дополнительные стили для заголовка
- * @param {object} contentSx - Дополнительные стили для контента
- * @param {object} actionsSx - Дополнительные стили для действий
- * @param {object} paperProps - Дополнительные пропсы для Paper компонента
- * @param {function} onBackdropClick - Кастомный обработчик клика на фон
+ * Базовый компонент для всплывающих окон (модальных окон).
+ * Все модальные окна на сайте должны использовать этот компонент
+ * для обеспечения единого стиля.
+ *
+ * @param {boolean} open
+ * @param {function} onClose
+ * @param {string} title
+ * @param {React.ReactNode} children
+ * @param {React.ReactNode} actions — кастомные actions (если нужен полный контроль)
+ * @param {string} maxWidth — 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
+ * @param {boolean} fullWidth
+ * @param {boolean} showCloseButton
+ * @param {boolean} disableEscapeKeyDown
+ * @param {boolean} disableBackdropClick
+ * @param {object} titleSx
+ * @param {object} contentSx
+ * @param {object} actionsSx
+ * @param {object} paperProps
+ *
+ * Стандартные кнопки подтверждения / отмены:
+ * @param {string} confirmText — текст кнопки подтверждения
+ * @param {function} onConfirm — обработчик подтверждения
+ * @param {string} cancelText — текст кнопки отмены
+ * @param {function} onCancel — обработчик отмены (по умолчанию = onClose)
+ * @param {boolean} confirmLoading — показать спиннер на кнопке подтверждения
+ * @param {boolean} confirmDisabled — отключить кнопку подтверждения
+ * @param {string} confirmColor — цвет кнопки подтверждения ('primary' | 'error')
+ * @param {boolean} hideCancel — скрыть кнопку отмены
  */
 export default function BaseModal({
   open,
@@ -43,40 +56,56 @@ export default function BaseModal({
   contentSx = {},
   actionsSx = {},
   paperProps = {},
-  onBackdropClick,
+  confirmText,
+  onConfirm,
+  cancelText,
+  onCancel,
+  confirmLoading = false,
+  confirmDisabled = false,
+  confirmColor = 'primary',
+  hideCancel = false,
 }) {
   const handleClose = (event, reason) => {
-    if (reason === 'backdropClick' && disableBackdropClick) {
-      return;
-    }
-    if (reason === 'escapeKeyDown' && disableEscapeKeyDown) {
-      return;
-    }
-    if (onBackdropClick && reason === 'backdropClick') {
-      onBackdropClick(event, reason);
-      return;
-    }
+    if (reason === 'backdropClick' && disableBackdropClick) return;
+    if (reason === 'escapeKeyDown' && disableEscapeKeyDown) return;
     onClose(event, reason);
   };
 
-  const defaultPaperProps = {
-    sx: {
-      borderRadius: '16px',
-      padding: '8px',
-      ...paperProps.sx,
-    },
-    ...paperProps,
+  const handleCancel = onCancel || onClose;
+
+  const renderActions = () => {
+    if (actions) return actions;
+
+    if (!onConfirm && !confirmText) return null;
+
+    return (
+      <>
+        {!hideCancel && (
+          <Button
+            onClick={handleCancel}
+            variant="outlined"
+            disabled={confirmLoading}
+          >
+            {cancelText || 'Отмена'}
+          </Button>
+        )}
+        <Button
+          onClick={onConfirm}
+          variant="contained"
+          color={confirmColor}
+          disabled={confirmDisabled || confirmLoading}
+        >
+          {confirmLoading ? (
+            <CircularProgress size={22} color="inherit" />
+          ) : (
+            confirmText || 'Подтвердить'
+          )}
+        </Button>
+      </>
+    );
   };
 
-  const defaultTitleSx = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    fontWeight: 700,
-    fontSize: '1.5rem',
-    pb: 1,
-    ...titleSx,
-  };
+  const computedActions = renderActions();
 
   return (
     <Dialog
@@ -85,66 +114,52 @@ export default function BaseModal({
       maxWidth={maxWidth}
       fullWidth={fullWidth}
       disableEscapeKeyDown={disableEscapeKeyDown}
-      PaperProps={defaultPaperProps}
+      PaperProps={paperProps}
       slotProps={{
         backdrop: {
           sx: {
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 10000, // Высокий z-index для перекрытия всех элементов
-            pointerEvents: 'auto', // Явно блокируем взаимодействие
+            zIndex: 10000,
           },
         },
       }}
       sx={{
-        zIndex: 10001, // Dialog должен быть выше backdrop
-        '& .MuiBackdrop-root': {
-          pointerEvents: 'auto', // Блокируем все взаимодействия под backdrop
-          zIndex: 10000, // Высокий z-index для перекрытия всех элементов
-        },
-        '& .MuiDialog-container': {
-          zIndex: 10001,
-        },
-        '& .MuiDialog-paper': {
-          zIndex: 10001,
-        },
+        zIndex: 10001,
+        '& .MuiDialog-container': { zIndex: 10001 },
+        '& .MuiDialog-paper': { zIndex: 10001 },
       }}
     >
       {title && (
-        <DialogTitle sx={defaultTitleSx}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            ...titleSx,
+          }}
+        >
           <Box component="span">{title}</Box>
           {showCloseButton && (
             <IconButton
               aria-label="close"
               onClick={onClose}
-              sx={{
-                color: (theme) => theme.palette.grey[500],
-                '&:hover': {
-                  color: (theme) => theme.palette.grey[700],
-                },
-              }}
+              sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
             >
               <CloseIcon />
             </IconButton>
           )}
         </DialogTitle>
       )}
-      
+
       <DialogContent sx={contentSx}>
         {children}
       </DialogContent>
 
-      {actions && (
-        <DialogActions sx={{ padding: '16px 24px', ...actionsSx }}>
-          {actions}
+      {computedActions && (
+        <DialogActions sx={actionsSx}>
+          {computedActions}
         </DialogActions>
       )}
     </Dialog>
   );
 }
-
-
-
-
-
-
-

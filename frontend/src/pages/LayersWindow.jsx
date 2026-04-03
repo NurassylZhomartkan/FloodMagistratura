@@ -1489,7 +1489,9 @@ export default function LayersWindow() {
 
   // Обработчик удаления слоя
   const handleDeleteClick = () => {
+    const layerIdToDelete = selectedLayerId;
     handleLayerMenuClose();
+    setSelectedLayerId(layerIdToDelete);
     setExpandedAccordion(null); // Закрываем аккордеон при открытии диалога
     setDeleteConfirmOpen(true);
   };
@@ -1664,10 +1666,10 @@ export default function LayersWindow() {
             sx={{
               width: '100%',
               boxShadow: 3,
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: 'white',
               '&:hover': {
-                backgroundColor: '#1565c0'
+                backgroundColor: 'primary.dark'
               }
             }}
           >

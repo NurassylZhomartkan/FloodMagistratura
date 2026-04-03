@@ -12,27 +12,32 @@ import { useTranslation } from 'react-i18next';
 
 import Layout        from './components/layout/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
-import Profile        from './pages/Profile';
-import HecRasProjects from './pages/HecRasProjects';
-import MapContentDebug from './pages/MapContentDebug';
-import LayersWindow   from './pages/LayersWindow';
-import DrawLayer      from './pages/DrawLayer';
-import Dashboard      from './pages/Dashboard';
-import FloodModelingPage from './pages/FloodModelingPage';
-import DTMFilterPage from './pages/DTMFilterPage';
-import TerrainMap from './pages/TerrainMap';
-import Instruction from './pages/Instruction';
-import Information from './pages/Information';
-import Database from './pages/Database';
-import Weather from './pages/Weather';
 
-// Ленивая загрузка HecRasViewer, чтобы он не выполнялся на странице /app/flood
-const HecRasViewer = React.lazy(() => import('./pages/HecRasViewer'));
+const Profile          = React.lazy(() => import('./pages/Profile'));
+const HecRasProjects   = React.lazy(() => import('./pages/HecRasProjects'));
+const HecRasViewer     = React.lazy(() => import('./pages/HecRasViewer'));
+const LayersWindow     = React.lazy(() => import('./pages/LayersWindow'));
+const DrawLayer        = React.lazy(() => import('./pages/DrawLayer'));
+const Dashboard        = React.lazy(() => import('./pages/Dashboard'));
+const FloodModelingPage = React.lazy(() => import('./pages/FloodModelingPage'));
+const DTMFilterPage    = React.lazy(() => import('./pages/DTMFilterPage'));
+const TerrainMap       = React.lazy(() => import('./pages/TerrainMap'));
+const Instruction      = React.lazy(() => import('./pages/Instruction'));
+const Information      = React.lazy(() => import('./pages/Information'));
+const Database         = React.lazy(() => import('./pages/Database'));
+const Weather          = React.lazy(() => import('./pages/Weather'));
+
+const PageFallback = (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+    <CircularProgress />
+  </Box>
+);
 
 export default function App() {
   const { t } = useTranslation();
   return (
     <Layout>
+      <Suspense fallback={PageFallback}>
       <Routes>
         {/* Главная (index) — дашборд */}
         <Route 
@@ -79,18 +84,7 @@ export default function App() {
                 padding: 0,
                 overflow: 'hidden'
               }}>
-                <Suspense fallback={
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: '100%' 
-                  }}>
-                    <CircularProgress />
-                  </Box>
-                }>
-                  <HecRasViewer />
-                </Suspense>
+                <HecRasViewer />
               </Box>
             </ErrorBoundary>
           } 
@@ -144,9 +138,9 @@ export default function App() {
           }
         />
 
-        {/* Карта с рельефом */}
+        {/* Карта станций мониторинга */}
         <Route 
-          path="terrain-map" 
+          path="stations" 
           element={
             <ErrorBoundary>
               <TerrainMap />
@@ -194,19 +188,10 @@ export default function App() {
           }
         />
 
-        {/* Отладка содержимого карты */}
-        <Route 
-          path="hec-ras/:projectHash/debug" 
-          element={
-            <ErrorBoundary>
-              <MapContentDebug />
-            </ErrorBoundary>
-          } 
-        />
-
         {/* Всё остальное → на главную */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </Layout>
   );
 }

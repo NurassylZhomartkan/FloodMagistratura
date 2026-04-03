@@ -201,13 +201,13 @@ export default function DEMFilters({
               }}
               sx={{
                 textTransform: 'none',
-                backgroundColor: '#1976d2',
+                backgroundColor: 'primary.main',
                 color: '#FFFFFF',
                 py: 1.5,
-                background: 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 '&:hover': {
-                  background: 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)',
+                  background: 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
                 },
               }}
@@ -223,13 +223,13 @@ export default function DEMFilters({
               }}
               sx={{
                 textTransform: 'none',
-                backgroundColor: '#1976d2',
+                backgroundColor: 'primary.main',
                 color: '#FFFFFF',
                 py: 1.5,
-                background: 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 '&:hover': {
-                  background: 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)',
+                  background: 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
                 },
               }}
@@ -245,13 +245,13 @@ export default function DEMFilters({
               }}
               sx={{
                 textTransform: 'none',
-                backgroundColor: '#1976d2',
+                backgroundColor: 'primary.main',
                 color: '#FFFFFF',
                 py: 1.5,
-                background: 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 '&:hover': {
-                  background: 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)',
+                  background: 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
                 },
               }}
@@ -267,13 +267,13 @@ export default function DEMFilters({
               }}
               sx={{
                 textTransform: 'none',
-                backgroundColor: '#1976d2',
+                backgroundColor: 'primary.main',
                 color: '#FFFFFF',
                 py: 1.5,
-                background: 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 '&:hover': {
-                  background: 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)',
+                  background: 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
                 },
               }}
@@ -287,21 +287,21 @@ export default function DEMFilters({
               disabled={!hasFilterHistory}
               sx={{
                 textTransform: 'none',
-                backgroundColor: hasFilterHistory ? '#1976d2' : '#9e9e9e',
+                backgroundColor: hasFilterHistory ? 'primary.main' : 'text.disabled',
                 color: '#FFFFFF',
                 py: 1.5,
                 background: hasFilterHistory
-                  ? 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)'
+                  ? 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)'
                   : 'none',
                 boxShadow: hasFilterHistory ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
                 '&:hover': {
                   background: hasFilterHistory
-                    ? 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)'
-                    : '#9e9e9e',
+                    ? 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)'
+                    : 'text.disabled',
                   boxShadow: hasFilterHistory ? '0 4px 8px rgba(0,0,0,0.3)' : 'none',
                 },
                 '&:disabled': {
-                  backgroundColor: '#9e9e9e',
+                  backgroundColor: 'text.disabled',
                   color: '#FFFFFF',
                 },
               }}
@@ -355,7 +355,7 @@ export default function DEMFilters({
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                       title="Information about sensitivity multiplier"
                     >
                       <InfoIcon fontSize="small" />
@@ -380,7 +380,7 @@ export default function DEMFilters({
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                       title="Information about number of iterations"
                     >
                       <InfoIcon fontSize="small" />
@@ -411,10 +411,10 @@ export default function DEMFilters({
             disabled={dtmFilterLoading}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -428,10 +428,10 @@ export default function DEMFilters({
             startIcon={dtmFilterLoading ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -520,10 +520,10 @@ export default function DEMFilters({
             disabled={noiseFilterLoading}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -537,10 +537,10 @@ export default function DEMFilters({
             startIcon={noiseFilterLoading ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -592,7 +592,7 @@ export default function DEMFilters({
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                       title="Delta: 0.0 = classic flat fill (can create large flat lakes). > 0 = enforces a tiny downhill gradient so filled areas drain (reduces flats). Typical values: 0.0 to 0.01"
                     >
                       <InfoIcon fontSize="small" />
@@ -617,7 +617,7 @@ export default function DEMFilters({
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                       title="Number of iterations: kept for UI compatibility. Priority-Flood algorithm does not require iterations (single pass, deterministic)."
                     >
                       <InfoIcon fontSize="small" />
@@ -648,10 +648,10 @@ export default function DEMFilters({
             disabled={hydroCorrectionLoading}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -665,10 +665,10 @@ export default function DEMFilters({
             startIcon={hydroCorrectionLoading ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -715,7 +715,7 @@ export default function DEMFilters({
                     <Typography>Nearest-neighbor</Typography>
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2', p: 0.5 }}
+                      sx={{ color: 'primary.main', p: 0.5 }}
                       title="Information about nearest-neighbor method"
                     >
                       <InfoIcon fontSize="small" />
@@ -731,7 +731,7 @@ export default function DEMFilters({
                     <Typography>Ocean edge classification</Typography>
                     <IconButton
                       size="small"
-                      sx={{ color: '#1976d2', p: 0.5 }}
+                      sx={{ color: 'primary.main', p: 0.5 }}
                       title="Information about ocean edge classification method"
                     >
                       <InfoIcon fontSize="small" />
@@ -749,10 +749,10 @@ export default function DEMFilters({
             disabled={fillDemHolesLoading}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: 'primary.dark',
               },
             }}
           >
@@ -766,12 +766,12 @@ export default function DEMFilters({
             startIcon={fillDemHolesLoading ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
               textTransform: 'none',
-              backgroundColor: '#1976d2',
+              backgroundColor: 'primary.main',
               color: '#FFFFFF',
-              background: 'linear-gradient(180deg, #1976d2 0%, #1565c0 100%)',
+              background: 'linear-gradient(180deg, #0077B6 0%, #0369A1 100%)',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               '&:hover': {
-                background: 'linear-gradient(180deg, #1565c0 0%, #0d47a1 100%)',
+                background: 'linear-gradient(180deg, #0369A1 0%, #023E8A 100%)',
                 boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
               },
             }}

@@ -4,7 +4,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Threebox } from 'threebox-plugin';
 
 import {
   Box,
@@ -12,6 +11,8 @@ import {
   Alert,
   Paper,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
   FormControlLabel,
   Checkbox,
   Divider,
@@ -28,13 +29,26 @@ import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ThreeDRotationIcon from '@mui/icons-material/ThreeDRotation';
-import Fab from '@mui/material/Fab';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../utils/usePageTitle';
 import MapComponent from '../components/map/Map';
 import { MAPBOX_ACCESS_TOKEN } from '../components/map/Map';
+import BaseModal from '../components/BaseModal';
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Tooltip as ChartTooltipPlugin,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, ChartTooltipPlugin, Legend);
 
 // Загружаем токен Mapbox из localStorage или используем значение по умолчанию из компонента Map
 const defaultMapboxToken = MAPBOX_ACCESS_TOKEN;
@@ -50,14 +64,6 @@ const CATEGORY_COLORS = {
   3: '#F59E0B', // Снегомерные точки - оранжевый
 };
 
-// URL для модели (Vite public/)
-const MODEL_URL = '/models/WeatherStation.glb';
-
-// Настройки для 3D (важно для стабильности)
-const MODELS_MIN_ZOOM = 10;      // показываем 3D только при приближении
-const MODELS_MAX_COUNT = 25;     // лимит, чтобы не убить WebGL
-const LOAD_DELAY_MS = 20;        // минимальная задержка для быстрой загрузки
-
 export default function TerrainMap() {
   const { t } = useTranslation();
 
@@ -67,7 +73,7 @@ export default function TerrainMap() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(null);
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [stationsData, setStationsData] = useState(null);
   const [categoryVisibility, setCategoryVisibility] = useState({
@@ -78,8 +84,14 @@ export default function TerrainMap() {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Выбранные станции для 3D (ключи стабильные!)
-  const [selectedStations, setSelectedStations] = useState(() => new Set());
+  // Hydro history modal (category 2)
+  const [hydroModalOpen, setHydroModalOpen] = useState(false);
+  const [hydroModalStationId, setHydroModalStationId] = useState('');
+  const [hydroModalStationName, setHydroModalStationName] = useState('');
+  const [hydroModalLoading, setHydroModalLoading] = useState(false);
+  const [hydroModalError, setHydroModalError] = useState(null);
+  const [hydroModalHistory, setHydroModalHistory] = useState(null);
+  const [hydroModalMetric, setHydroModalMetric] = useState('level');
 
   const markersRef = useRef([]);
   const popupsRef = useRef([]);
@@ -87,7 +99,6 @@ export default function TerrainMap() {
   // refs для актуальных данных внутри custom layer
   const stationsDataRef = useRef(null);
   const categoryVisibilityRef = useRef(categoryVisibility);
-  const selectedStationsRef = useRef(selectedStations);
 
   useEffect(() => {
     stationsDataRef.current = stationsData;
@@ -96,21 +107,6 @@ export default function TerrainMap() {
   useEffect(() => {
     categoryVisibilityRef.current = categoryVisibility;
   }, [categoryVisibility]);
-
-  useEffect(() => {
-    selectedStationsRef.current = selectedStations;
-    // При смене выбранных станций — синхронизируем модели
-    requestModelsSync();
-  }, [selectedStations]);
-
-  // Храним модели по ключу станции (чтобы добавлять/удалять выборочно)
-  const modelsByKeyRef = useRef(new Map());     // key -> threebox object
-  const loadingKeysRef = useRef(new Set());     // key currently loading
-  const syncTimerRef = useRef(null);
-  
-  // Кэш загруженных моделей (по URL модели)
-  const modelCacheRef = useRef(new Map());      // MODEL_URL -> threebox model object
-  const modelLoadingPromisesRef = useRef(new Map()); // MODEL_URL -> Promise<model>
 
   // Кэш метеостанций (категория 1): key -> { lng, lat, name }
   const weatherStationLookupRef = useRef(new Map());
@@ -142,8 +138,6 @@ export default function TerrainMap() {
 
     weatherStationLookupRef.current = lookup;
 
-    // Если данные обновились — тоже синхронизируем 3D
-    requestModelsSync();
   }, [stationsData]);
 
   // Заголовок страницы
@@ -199,63 +193,6 @@ export default function TerrainMap() {
     }, 1600);
   }, []);
 
-  // Zoom to 3D models
-  const zoomTo3DModels = useCallback(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !map.loaded() || !stationsData) return;
-
-    // Находим все выбранные станции с 3D моделями (категория 1)
-    const selected3DStations = [];
-    const lookup = weatherStationLookupRef.current || new Map();
-    const selected = selectedStationsRef.current || new Set();
-
-    for (const key of selected) {
-      const station = lookup.get(key);
-      if (station) {
-        selected3DStations.push(station);
-      }
-    }
-
-    if (selected3DStations.length === 0) {
-      // Если нет выбранных 3D моделей, пытаемся найти первую метеостанцию
-      const weatherCategory = stationsData.find((cat) => cat?.category?.id === 1);
-      if (weatherCategory?.sites?.length > 0) {
-        const firstStation = weatherCategory.sites[0];
-        map.flyTo({
-          center: [firstStation.longtitude, firstStation.latitude],
-          zoom: 15,
-          pitch: 75,
-          bearing: 0,
-          duration: 2000,
-          essential: true,
-        });
-      }
-      return;
-    }
-
-    // Вычисляем центр всех выбранных станций
-    let avgLng = 0;
-    let avgLat = 0;
-    selected3DStations.forEach((station) => {
-      avgLng += station.lng;
-      avgLat += station.lat;
-    });
-    avgLng /= selected3DStations.length;
-    avgLat /= selected3DStations.length;
-
-    // Приближаем камеру к 3D моделям с высоким zoom и pitch
-    map.flyTo({
-      center: [avgLng, avgLat],
-      zoom: selected3DStations.length === 1 ? 15 : 14,
-      pitch: 75,
-      bearing: 0,
-      duration: 2000,
-      essential: true,
-    });
-
-    popupsRef.current.forEach((popup) => popup.remove());
-  }, [stationsData]);
-
   // Собираем список станций для UI
   const allStations = useMemo(() => {
     if (!stationsData) return [];
@@ -301,6 +238,141 @@ export default function TerrainMap() {
       });
   }, []);
 
+  function formatDDMMYYYY(iso) {
+    if (!iso) return '';
+    const parts = String(iso).split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    return `${d}.${m}.${y}`;
+  }
+
+  const openHydroModal = useCallback((stationCode, stationName) => {
+    const sid = String(stationCode || '').trim();
+    if (!sid) return;
+    setHydroModalStationId(sid);
+    setHydroModalStationName(stationName || sid);
+    setHydroModalError(null);
+    setHydroModalHistory(null);
+    setHydroModalMetric('level');
+    setHydroModalOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydroModalOpen || !hydroModalStationId) return;
+
+    const load = async () => {
+      setHydroModalLoading(true);
+      setHydroModalError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const params = new URLSearchParams({
+          station_id: hydroModalStationId,
+          metric: hydroModalMetric,
+          date_from: '2020-01-01',
+          date_to: todayIso,
+        });
+        const res = await fetch(`/api/hydro-stations/history?${params.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const j = await res.json();
+        if (!j?.ok) throw new Error(j?.error || 'no_data');
+        setHydroModalHistory(j);
+      } catch (e) {
+        setHydroModalError(e?.message || t('databasePage.error'));
+      } finally {
+        setHydroModalLoading(false);
+      }
+    };
+
+    load();
+  }, [hydroModalMetric, hydroModalOpen, hydroModalStationId, t]);
+
+  const hydroModalLineData = useMemo(() => {
+    const series =
+      hydroModalMetric === 'discharge'
+        ? hydroModalHistory?.discharges || []
+        : hydroModalHistory?.levels || [];
+    if (!series.length) return null;
+    const byDate = new Map(series.map((r) => [r.date, r]));
+    const labels = [...byDate.keys()].sort();
+    if (hydroModalMetric === 'discharge') {
+      return {
+        labels,
+        datasets: [
+          {
+            label: 'Расход воды, м3/с',
+            data: labels.map((d) => byDate.get(d)?.discharge ?? null),
+            borderColor: '#1E63CC',
+            backgroundColor: 'rgba(30, 99, 204, 0.14)',
+            pointRadius: 2,
+            tension: 0.25,
+          },
+        ],
+      };
+    }
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Факт. уровень, см',
+          data: labels.map((d) => byDate.get(d)?.actual_level ?? null),
+          borderColor: 'rgba(0, 119, 182, 0.95)',
+          backgroundColor: 'rgba(0, 119, 182, 0.15)',
+          pointRadius: 2,
+          tension: 0.25,
+        },
+        {
+          label: 'Опасный уровень, см',
+          data: labels.map((d) => byDate.get(d)?.danger_level ?? null),
+          borderColor: 'rgba(220, 38, 38, 0.95)',
+          backgroundColor: 'rgba(220, 38, 38, 0.1)',
+          pointRadius: 0,
+          borderDash: [6, 4],
+          tension: 0,
+        },
+      ],
+    };
+  }, [hydroModalHistory, hydroModalMetric]);
+
+  const hydroModalLineOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            title: (items) =>
+              items?.[0]?.label ? formatDDMMYYYY(items[0].label) : '',
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(148,163,184,0.12)' },
+          ticks: {
+            maxTicksLimit: 8,
+            callback: (_, idx) => {
+              const lbl = hydroModalLineData?.labels?.[idx];
+              return lbl ? formatDDMMYYYY(lbl) : '';
+            },
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: hydroModalMetric === 'discharge' ? 'Расход (м3/с)' : 'Уровень (см)',
+          },
+          grid: { color: 'rgba(148,163,184,0.2)' },
+        },
+      },
+    }),
+    [hydroModalLineData, hydroModalMetric]
+  );
+
   // Обработчик готовности карты
   const handleMapReady = useCallback((map) => {
     if (!map) return;
@@ -334,9 +406,6 @@ export default function TerrainMap() {
       addTerrain(map);
     });
 
-    // 3D слой загружаем только когда нужно (при приближении или выборе станций)
-    // Не загружаем сразу при загрузке карты
-
     map.on('error', (e) => {
       console.error('Map error:', e);
       if (e?.error?.message) {
@@ -351,14 +420,6 @@ export default function TerrainMap() {
       }
     });
 
-    // При zoomend/moveend синхронизируем (чтобы при удалении/приближении модели корректно очищались)
-    map.on('zoomend', () => {
-      requestModelsSync();
-    });
-    map.on('moveend', () => {
-      // threebox автоматически обновляет позиции моделей
-      requestModelsSync();
-    });
   }, [t, toggleSidebar]);
 
   // Cleanup при размонтировании
@@ -370,25 +431,11 @@ export default function TerrainMap() {
       markersRef.current = [];
       popupsRef.current = [];
 
-      // 3D модели
-      safeClearAllModels();
-
       const map = mapInstanceRef.current;
       if (map) {
-        try { if (map.getLayer('threebox-layer')) map.removeLayer('threebox-layer'); } catch {}
         try { if (map.getLayer('hillshade')) map.removeLayer('hillshade'); } catch {}
         try { if (map.getLayer('sky')) map.removeLayer('sky'); } catch {}
         try { if (map.getSource('mapbox-dem')) map.removeSource('mapbox-dem'); } catch {}
-      }
-
-      // Очистка threebox
-      if (window['tb']) {
-        try {
-          window['tb'].clear();
-          window['tb'] = null;
-        } catch (e) {
-          console.error('Error clearing threebox:', e);
-        }
       }
 
       mapInstanceRef.current = null;
@@ -442,6 +489,11 @@ export default function TerrainMap() {
             if (p !== marker.getPopup()) p.remove();
           });
           marker.togglePopup();
+
+          // Hydro post -> open modal with chart
+          if (categoryId === 2) {
+            openHydroModal(site.code, site.name);
+          }
         });
 
         markersRef.current.push(marker);
@@ -534,332 +586,6 @@ export default function TerrainMap() {
     }
   }
 
-  // ---------- 3D layer ----------
-  async function ensure3DLayer(map) {
-    if (!map || !map.isStyleLoaded()) return;
-    if (window['tb']) return;
-    if (map.getLayer('threebox-layer')) return;
-
-    // Получаем WebGL контекст (важно для Mapbox GL v2/v3)
-    const gl =
-      map.painter?.context?.gl ||
-      map.getCanvas().getContext('webgl2') ||
-      map.getCanvas().getContext('webgl');
-
-    if (!gl) {
-      console.error('WebGL context not available for Threebox');
-      return;
-    }
-
-    try {
-      // Инициализируем threebox как глобальный объект
-      window['tb'] = new Threebox(map, gl, { defaultLights: true });
-      
-      console.log('Threebox initialized as global window.tb');
-
-      // Добавляем threebox как custom layer
-      map.addLayer({
-        id: 'threebox-layer',
-        type: 'custom',
-        renderingMode: '3d',
-        onAdd: function () {
-          this.tb = window['tb'];
-        },
-        render: function () {
-          this.tb.update();
-        }
-      });
-
-        // Первичная синхронизация
-        requestModelsSync();
-    } catch (error) {
-      console.error('Error initializing threebox:', error);
-    }
-  }
-
-  // ---------- 3D sync logic ----------
-  const isSyncingRef = useRef(false);
-  
-  function requestModelsSync() {
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => {
-      // Предотвращаем множественные одновременные вызовы
-      if (isSyncingRef.current) {
-        console.log('Sync already in progress, skipping...');
-        return;
-      }
-      isSyncingRef.current = true;
-      syncModelsWithSelection()
-        .catch((e) => console.error('syncModels error:', e))
-        .finally(() => {
-          isSyncingRef.current = false;
-        });
-    }, 50); // Уменьшена задержка для более быстрой синхронизации
-  }
-
-  // Получает ключи метеостанций в текущем viewport
-  function getWeatherKeysInView(map) {
-    const lookup = weatherStationLookupRef.current || new Map();
-    const b = map.getBounds();
-    const keys = [];
-
-    for (const [key, s] of lookup.entries()) {
-      if (b.contains([s.lng, s.lat])) keys.push(key);
-    }
-    return keys;
-  }
-
-  async function syncModelsWithSelection() {
-    const map = mapInstanceRef.current;
-    const visibility = categoryVisibilityRef.current;
-
-    if (!map) return;
-
-    // Выбранные ключи
-    const selected = selectedStationsRef.current || new Set();
-    const isManualSelection = selected.size > 0; // Ручной выбор станций
-
-    // Если категория 1 выключена — чистим
-    if (!visibility?.[1]) {
-      safeClearAllModels();
-      return;
-    }
-
-    // Для ручного выбора (клик на станцию) - загружаем модели сразу, без проверки zoom
-    // Для автозагрузки - проверяем zoom
-    if (!isManualSelection && map.getZoom() < MODELS_MIN_ZOOM) {
-      safeClearAllModels();
-      return;
-    }
-
-    // Инициализируем threebox только когда нужно (при приближении или ручном выборе)
-    if (!window['tb']) {
-      await ensure3DLayer(map);
-    }
-
-    const tb = window['tb'];
-    if (!tb) return;
-
-    // Нужны только те, что существуют среди метеостанций
-    const lookup = weatherStationLookupRef.current || new Map();
-
-    let desiredKeys = [];
-    const isAutoLoad = !isManualSelection; // Флаг автозагрузки
-
-    if (selected.size > 0) {
-      // Старое поведение: только выбранные
-      for (const key of selected) {
-        if (lookup.has(key)) desiredKeys.push(key);
-      }
-    } else {
-      // НОВОЕ: автозагрузка метеостанций в текущем окне карты
-      desiredKeys = getWeatherKeysInView(map);
-    }
-
-    // лимит по количеству (защита WebGL)
-    desiredKeys = desiredKeys.slice(0, MODELS_MAX_COUNT);
-
-    // Удаляем лишние модели
-    const modelsByKey = modelsByKeyRef.current;
-    for (const [key, tbObject] of modelsByKey.entries()) {
-      if (!desiredKeys.includes(key)) {
-        try {
-          window['tb'].remove(tbObject);
-        } catch (e) {
-          console.error('Error removing model:', e);
-        }
-        modelsByKey.delete(key);
-      }
-    }
-
-    // Добавляем недостающие (последовательно)
-    for (let i = 0; i < desiredKeys.length; i++) {
-      const key = desiredKeys[i];
-
-      // Проверяем, что модель еще не загружена и не загружается
-      if (modelsByKey.has(key)) continue;
-      if (loadingKeysRef.current.has(key)) continue;
-
-      const station = lookup.get(key);
-      if (!station) continue;
-
-      // Помечаем как загружающуюся сразу
-      loadingKeysRef.current.add(key);
-
-      // Минимальная задержка только для первой модели, остальные загружаем параллельно
-      if (i > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      await sleep(LOAD_DELAY_MS);
-      }
-
-      // если за время ожидания условия изменились — прекращаем
-      const mapNow = mapInstanceRef.current;
-      const tbNow = window['tb'];
-      const visNow = categoryVisibilityRef.current;
-      const selectedNow = selectedStationsRef.current || new Set();
-      const isManualNow = selectedNow.size > 0;
-      
-      // Для ручного выбора не проверяем zoom, для автозагрузки - проверяем
-      if (!mapNow || !tbNow || !visNow?.[1] || (!isManualNow && mapNow.getZoom() < MODELS_MIN_ZOOM)) {
-        loadingKeysRef.current.delete(key);
-        return;
-      }
-
-      try {
-        console.log('Loading model for station:', key, station);
-        
-        // Получаем высоту рельефа для позиционирования модели
-        let elevation = 0;
-        try {
-          if (mapNow.getSource('mapbox-dem')) {
-            const terrainElevation = mapNow.queryTerrainElevation([station.lng, station.lat]);
-            if (terrainElevation !== null && terrainElevation !== undefined && !isNaN(terrainElevation)) {
-              elevation = terrainElevation;
-              console.log(`Terrain elevation at ${station.lng},${station.lat}: ${elevation}m`);
-            }
-          }
-        } catch (e) {
-          console.warn('Error querying terrain elevation:', e);
-        }
-
-        // Проверяем условия перед загрузкой
-        // Если автозагрузка - проверяем viewport, иначе - selectedStations
-        let shouldLoad = false;
-        if (isAutoLoad) {
-          // Для автозагрузки: проверяем, что станция все еще в viewport
-          const bounds = mapNow.getBounds();
-          shouldLoad = bounds.contains([station.lng, station.lat]);
-        } else {
-          // Для ручного выбора: проверяем, что станция все еще выбрана
-          shouldLoad = (selectedStationsRef.current || new Set()).has(key);
-        }
-
-        if (!shouldLoad) {
-          console.log(`Station ${isAutoLoad ? 'out of viewport' : 'deselected'} during load, skipping:`, key);
-          loadingKeysRef.current.delete(key);
-          continue;
-        }
-
-        // Используем кэш для загрузки модели
-        let cachedModel = modelCacheRef.current.get(MODEL_URL);
-        let loadPromise = modelLoadingPromisesRef.current.get(MODEL_URL);
-
-        if (!cachedModel && !loadPromise) {
-          // Модель не загружена и не загружается - создаем промис загрузки
-          loadPromise = new Promise((resolve, reject) => {
-            const options = {
-              obj: MODEL_URL,
-              type: 'gltf',
-              scale: 50, // масштаб модели (50 метров)
-              units: 'meters',
-              rotation: { x: 90, y: 180, z: 0 }, // Поворот по оси X на 90° и по Y на 180° чтобы модель стояла правильно
-              anchor: 'center',
-            };
-
-            console.log('Loading model into cache:', MODEL_URL);
-            window['tb'].loadObj(options, (model) => {
-              // Сохраняем в кэш
-              modelCacheRef.current.set(MODEL_URL, model);
-              modelLoadingPromisesRef.current.delete(MODEL_URL);
-              console.log('Model cached successfully:', MODEL_URL);
-              resolve(model);
-            }, (error) => {
-              modelLoadingPromisesRef.current.delete(MODEL_URL);
-              console.error('Error loading model:', MODEL_URL, error);
-              reject(error);
-            });
-          });
-
-          modelLoadingPromisesRef.current.set(MODEL_URL, loadPromise);
-        } else if (cachedModel) {
-          // Модель уже в кэше - используем её сразу
-          loadPromise = Promise.resolve(cachedModel);
-        }
-
-        // Ждем загрузки модели (из кэша или новой загрузки)
-        loadPromise
-          .then((baseModel) => {
-            // Проверяем, что модель еще не добавлена для этой станции
-            if (modelsByKey.has(key)) {
-              console.log('Model already added for key, skipping:', key);
-        loadingKeysRef.current.delete(key);
-              return;
-            }
-
-            // Проверяем условия после загрузки
-            const mapAfterLoad = mapInstanceRef.current;
-            if (!mapAfterLoad) {
-              console.log('Map not available after load, skipping:', key);
-              loadingKeysRef.current.delete(key);
-              return;
-            }
-
-            let shouldAdd = false;
-            if (isAutoLoad) {
-              // Для автозагрузки: проверяем, что станция все еще в viewport
-              const bounds = mapAfterLoad.getBounds();
-              shouldAdd = bounds.contains([station.lng, station.lat]);
-        } else {
-              // Для ручного выбора: проверяем, что станция все еще выбрана
-              shouldAdd = (selectedStationsRef.current || new Set()).has(key);
-            }
-
-            if (!shouldAdd) {
-              console.log(`Station ${isAutoLoad ? 'out of viewport' : 'deselected'} after load, skipping:`, key);
-              loadingKeysRef.current.delete(key);
-              return;
-            }
-
-            console.log('Model loaded from cache for key:', key);
-            
-            // Используем оригинальную модель (threebox может переиспользовать её для разных позиций)
-            // Устанавливаем позицию с учетом высоты рельефа
-            const house = baseModel.setCoords([station.lng, station.lat, elevation]);
-            
-            // Добавляем модель на карту
-            window['tb'].add(house);
-            
-            // Сохраняем в кэш для быстрого доступа
-            modelsByKey.set(key, house);
-            
-            console.log('Model added via threebox for key:', key, 'at', [station.lng, station.lat, elevation]);
-            loadingKeysRef.current.delete(key);
-          })
-          .catch((error) => {
-            console.error('Error loading model for key:', key, error);
-            loadingKeysRef.current.delete(key);
-          });
-      } catch (e) {
-        console.error('Failed to load model for key:', key, e);
-      } finally {
-        loadingKeysRef.current.delete(key);
-      }
-    }
-  }
-
-
-  function safeClearAllModels() {
-    const tb = window['tb'];
-    const modelsByKey = modelsByKeyRef.current;
-
-    if (tb) {
-      for (const [, tbObject] of modelsByKey.entries()) {
-        try {
-          tb.remove(tbObject);
-        } catch (e) {
-          console.error('Error clearing model:', e);
-        }
-      }
-    }
-
-    modelsByKey.clear();
-    loadingKeysRef.current.clear();
-  }
-
-  function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
-  }
-
   // ---------- UI ----------
   return (
     <Box
@@ -905,7 +631,7 @@ export default function TerrainMap() {
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
-          transition: 'transform 1s',
+          transition: 'none',
           transform: sidebarCollapsed ? `translateX(-${SIDEBAR_WIDTH - 5}px)` : 'translateX(0)',
         }}
       >
@@ -937,8 +663,8 @@ export default function TerrainMap() {
               width: 32,
               height: 32,
               '&:hover': {
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                color: '#6366F1',
+                backgroundColor: 'rgba(0, 119, 182, 0.1)',
+                color: 'primary.main',
               },
             }}
           >
@@ -1027,47 +753,22 @@ export default function TerrainMap() {
                 >
                   {allStations.map((station) => {
                     const stationKey = getStationKey(station); // стабильный ключ
-                    const isSelected = selectedStations.has(stationKey);
-
-                    // Для UI разрешаем выбирать любые станции, но 3D будет только для категории 1.
-                    const is3DAvailable = station.categoryId === 1;
 
                     return (
                       <ListItem key={stationKey} disablePadding>
                         <ListItemButton
-                          onClick={() => flyToStation(station.longtitude, station.latitude)}
+                          onClick={() => {
+                            flyToStation(station.longtitude, station.latitude);
+                            if (station.categoryId === 2) {
+                              openHydroModal(station.code, station.name);
+                            }
+                          }}
                           sx={{
                             borderRadius: 1,
                             mb: 0.5,
                             '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.08)' },
                           }}
                         >
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            <Checkbox
-                              disabled={!is3DAvailable}
-                              checked={isSelected}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setSelectedStations((prev) => {
-                                  const next = new Set(prev);
-                                  if (e.target.checked) next.add(stationKey);
-                                  else next.delete(stationKey);
-                                  return next;
-                                });
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              sx={{
-                                color: is3DAvailable
-                                  ? (CATEGORY_COLORS[station.categoryId] || '#666')
-                                  : 'rgba(0,0,0,0.25)',
-                                '&.Mui-checked': {
-                                  color: CATEGORY_COLORS[station.categoryId] || '#666',
-                                },
-                                padding: '4px',
-                              }}
-                            />
-                          </ListItemIcon>
-
                           <ListItemText
                             primary={station.name}
                             secondary={
@@ -1080,7 +781,6 @@ export default function TerrainMap() {
                                   sx={{ color: 'text.secondary', fontSize: '0.7rem' }}
                                 >
                                   {station.categoryName}
-                                  {!is3DAvailable ? ' • 3D только для категории 1' : ''}
                                 </Typography>
                               </Box>
                             }
@@ -1136,20 +836,47 @@ export default function TerrainMap() {
         </Box>
       )}
 
-      {/* Кнопка приближения к 3D моделям */}
-      <Fab
-        color="primary"
-        aria-label="zoom to 3D models"
-        onClick={zoomTo3DModels}
-        sx={{
-          position: 'absolute',
-          bottom: 20,
-          right: 20,
-          zIndex: 1000,
-        }}
+      <BaseModal
+        open={hydroModalOpen}
+        onClose={() => setHydroModalOpen(false)}
+        title={`Гидропост: ${hydroModalStationName}`}
+        maxWidth="lg"
       >
-        <ThreeDRotationIcon />
-      </Fab>
+        <Box sx={{ minHeight: 320 }}>
+          <Box sx={{ mb: 2 }}>
+            <ToggleButtonGroup
+              value={hydroModalMetric}
+              exclusive
+              size="small"
+              onChange={(_, nextValue) => {
+                if (nextValue) setHydroModalMetric(nextValue);
+              }}
+              aria-label="Выбор параметра гидропоста"
+            >
+              <ToggleButton value="level">Уровень воды</ToggleButton>
+              <ToggleButton value="discharge">Расход воды</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          {hydroModalLoading && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240 }}>
+              <CircularProgress size={32} sx={{ color: '#0077B6' }} />
+            </Box>
+          )}
+          {!hydroModalLoading && hydroModalError && (
+            <Alert severity="error">{hydroModalError}</Alert>
+          )}
+          {!hydroModalLoading && !hydroModalError && hydroModalLineData && (
+            <Box sx={{ height: 340 }}>
+              <Line data={hydroModalLineData} options={hydroModalLineOptions} />
+            </Box>
+          )}
+          {!hydroModalLoading && !hydroModalError && !hydroModalLineData && (
+            <Typography variant="caption" color="text.secondary">
+              Нет данных для выбранного гидропоста
+            </Typography>
+          )}
+        </Box>
+      </BaseModal>
     </Box>
   );
 }

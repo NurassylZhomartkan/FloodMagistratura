@@ -655,6 +655,17 @@ def create_flood_project(
     db.refresh(project)
     return project
 
+def list_flood_projects_by_owner(db: Session, owner_id: int):
+    """
+    Возвращает все flood-проекты пользователя из БД (только те, что были сохранены через share).
+    """
+    return (
+        db.query(FloodProject)
+          .filter(FloodProject.owner_id == owner_id)
+          .order_by(FloodProject.created_at.desc())
+          .all()
+    )
+
 def get_flood_project(db: Session, project_id: int, owner_id: int = None):
     """
     Возвращает flood проект по ID.

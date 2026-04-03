@@ -8,6 +8,13 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FloodSite</title>
+    <!-- Preconnect to external services for faster resource loading -->
+    <link rel="preconnect" href="https://api.mapbox.com" />
+    <link rel="preconnect" href="https://events.mapbox.com" />
+    <link rel="dns-prefetch" href="https://a.tiles.mapbox.com" />
+    <link rel="dns-prefetch" href="https://b.tiles.mapbox.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <script>
       // Полифилл для global (необходим для некоторых библиотек, например @mapbox/mapbox-gl-draw)
       var global = global || globalThis || window;

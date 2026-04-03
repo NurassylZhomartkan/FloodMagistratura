@@ -85,7 +85,7 @@
     "hecRas": "HecRas Projects",
     "floodModeling": "Flood Modeling",
     "uploadNewProjectPage": "Upload new project page",
-    "terrainMap": "Terrain Map",
+    "terrainMap": "Monitoring Stations",
     "instruction": "Instruction",
     "information": "Information",
     "weather": "Weather",
@@ -180,6 +180,7 @@
     "dateAdded": "Date added",
     "fileSize": "File size",
     "selectFile": "Select .db file",
+    "setPassword": "Set password",
     "projectName": "Project name",
     "planName": "Plan name",
     "projectInfo": "Project information",
@@ -199,7 +200,6 @@
     "shareError": "Failed to create link",
     "sharePassword": "Password for access",
     "addPassword": "Add password",
-    "setPassword": "Set password",
     "changePassword": "Change password",
     "updatePassword": "Update password",
     "removePassword": "Delete password",
@@ -248,7 +248,7 @@
     "resetPassword": "Reset Password",
     "verifyEmail": "Verify Email",
     "floodModeling": "Flood Modeling",
-    "terrainMap": "Terrain Map",
+    "terrainMap": "Monitoring Stations",
     "instruction": "Instruction",
     "information": "Information",
     "database": "Database",
@@ -429,8 +429,8 @@
     "sessionExpired": "Session expired. Please sign in again.",
     "authCheckError": "Error checking authorization. Please sign in again.",
     "loadTerrainFileFirst": "Please load a terrain file first",
-      "inputLuClasses": "Input LU classes",
-      "accordions": {
+    "inputLuClasses": "Input LU classes",
+    "accordions": {
       "elevation": "Elevation",
       "landCover": "Land Cover",
       "rainfall": "Rainfall",
@@ -583,6 +583,68 @@
   "drawLayer": {
     "noObjectsToSave": "No objects to save"
   },
+  "weather": {
+    "title": "Weather — Ust-Kamenogorsk",
+    "city": "Ust-Kamenogorsk",
+    "mAsl": "m asl",
+    "currentWeather": "Current Weather",
+    "feelsLike": "Feels like",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "precipitation": "Precipitation",
+    "wind": "Wind",
+    "gusts": "Gusts",
+    "cloudCover": "Cloud cover",
+    "pressure": "Pressure",
+    "rain": "Rain",
+    "snowDepth": "Snow Depth",
+    "day": "Day",
+    "night": "Night",
+    "hourlyForecast": "Hourly Forecast (48h)",
+    "dailyForecast": "7-Day Forecast",
+    "tempShort": "Temp",
+    "precipShort": "Precip",
+    "humidShort": "Humid",
+    "pressShort": "Press",
+    "precipProbability": "Precip. probability",
+    "mm": "mm",
+    "kmh": "km/h",
+    "hpa": "hPa",
+    "m": "m",
+    "loadError": "Error loading weather data",
+    "noData": "No data",
+    "precipProbabilityShort": "precip probability",
+    "windStatus": "Wind Status",
+    "sunriseSunset": "Sunrise & Sunset",
+    "sunrise": "Sunrise",
+    "sunset": "Sunset",
+    "maxT": "Today max",
+    "minT": "Today min",
+    "pressureHigh": "High pressure",
+    "pressureLow": "Low pressure",
+    "pressureNormal": "Normal pressure",
+    "today": "Today",
+    "week": "Week",
+    "todaysHighlights": "Today's Highlights",
+    "searchPlaces": "Search for places ...",
+    "precipHeavy": "Heavy precipitation",
+    "precipLight": "Light precipitation",
+    "precipNone": "No precipitation",
+    "conditions": {
+      "sunny": "Sunny",
+      "partlyCloudy": "Partly Cloudy",
+      "mostlyCloudy": "Mostly Cloudy",
+      "overcast": "Overcast",
+      "rain": "Rain",
+      "heavyRain": "Heavy Rain"
+    },
+    "humidStatus": {
+      "low": "Dry 🌵",
+      "normal": "Normal 👍",
+      "high": "High 💧",
+      "veryHigh": "Very High 💦"
+    }
+  },
   "terrainMap": {
     "loading": "Loading map...",
     "errorTitle": "Map loading error",
@@ -601,5 +663,109 @@
     "stationsList": "Stations List",
     "searchPlaceholder": "Search stations...",
     "noStationsFound": "No stations found"
+  },
+  "databasePage": {
+    "title": "My Data",
+    "tabs": {
+      "hecras": "HEC-RAS Projects",
+      "flood": "Flood Projects",
+      "layers": "Custom Layers",
+      "hydro": "Hydro Stations"
+    },
+    "columns": {
+      "id": "ID",
+      "createdAt": "Created At",
+      "name": "Name",
+      "filename": "File",
+      "hasShare": "Public Link",
+      "hasPassword": "Password",
+      "fillColor": "Fill Color",
+      "lineColor": "Line Color",
+      "stationName": "Station",
+      "stationId": "Station ID",
+      "param": "Parameter",
+      "dateOnSite": "Date (site)",
+      "actualLevel": "Actual Level",
+      "dangerLevel": "Danger Level",
+      "discharge": "Discharge",
+      "waterTemp": "Water Temp",
+      "statusCode": "Code",
+      "stationColor": "Status",
+      "scrapedAt": "Updated"
+    },
+    "paramLevel": "Level",
+    "paramDischarge": "Discharge",
+    "scheduler": "Scheduler",
+    "schedulerOn": "Active",
+    "schedulerOff": "Stopped",
+    "lastScrape": "Last scrape",
+    "nextScrape": "Next",
+    "scraping": "Scraping...",
+    "triggerNow": "Run scraping now",
+    "yes": "Yes",
+    "no": "No",
+    "error": "Failed to load data",
+    "noData": "No data",
+    "refresh": "Refresh",
+    "hydroSource": "Source: hydrological monitoring map ecodata.kz (Kazhydromet RSE). Data refreshes on schedule or via the button below.",
+    "chartTitle": "Water level vs danger level (cm), priority stations",
+    "chartActual": "Actual level, cm",
+    "chartDanger": "Danger level, cm",
+    "chartAxisCm": "cm",
+    "importCsv": "Upload stations_all.csv",
+    "importCsvHint": "If the table is empty: use the CSV from your ecodata.kz parser (stations_all.csv), or place it under backend/parsing/output/ — it loads on server startup when the DB has no rows.",
+    "importCsvOk": "Imported rows: {{count}}",
+    "importCsvFail": "CSV import failed",
+    "importing": "Importing…",
+    "chartCritical": "Critical level, cm"
+  },
+  "instruction": {
+    "intro": {
+      "title": "Welcome to FloodSite",
+      "description": "This guide will help you understand the features of the flood monitoring and modeling platform. Review each section's description to get started quickly."
+    },
+    "navigation": {
+      "title": "Site Sections"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "The dashboard shows a summary of the current situation: active flood zones, water level, population at risk, critical objects, and key metrics. Cards update in real time and give a quick overview of conditions."
+    },
+    "weather": {
+      "title": "Weather",
+      "description": "The weather page shows current meteorological data for Ust-Kamenogorsk and other locations: temperature, precipitation, humidity, pressure, wind speed and direction. Hourly forecast for 48 hours and daily forecast for 7 days are available."
+    },
+    "layers": {
+      "title": "Layer Management",
+      "description": "This section allows you to add, view and delete custom geospatial layers in GeoJSON format. Layers are displayed on the map over the base layer. You can also configure the Google Flood Hub API key and activate external layers."
+    },
+    "hecRas": {
+      "title": "HEC-RAS Projects",
+      "description": "This section stores uploaded hydraulic modeling projects in HEC-RAS format (.db files). Each project has a viewer with flood propagation animation, flood area chart, and the ability to share a link."
+    },
+    "floodModeling": {
+      "title": "Flood Modeling",
+      "description": "A tool for calculating flood scenarios based on a digital elevation model (DEM). Upload a GeoTIFF with elevations or download Copernicus data automatically, set precipitation, infiltration, land cover parameters and run a simulation. Results are displayed on the map as a water depth layer."
+    },
+    "terrainMap": {
+      "title": "Terrain Map",
+      "description": "An interactive 3D terrain map based on Mapbox. Allows you to visualize terrain and view hydrological station data. Streets, Satellite and Hybrid styles are supported; camera tilt and rotation are available."
+    },
+    "database": {
+      "title": "Database",
+      "description": "The page displays all your data: HEC-RAS projects, flood modeling results, and custom layers. A tabular view shows the creation date, files, presence of public links and passwords."
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "In the profile section you can change your email, password and upload an avatar. Map settings are also here: selecting the default style and projection."
+    },
+    "tips": {
+      "title": "Tips for Beginners",
+      "tip1": "Click the icon in the sidebar to collapse or expand the navigation menu.",
+      "tip2": "For your first introduction to modeling, upload a small GeoTIFF file with terrain of a test area.",
+      "tip3": "Public links to HEC-RAS projects can be password protected before sharing with third parties.",
+      "tip4": "On the weather page you can search for other cities using the search bar at the top.",
+      "tip5": "The interface language can be changed via the button in the top right corner of the header."
+    }
   }
 }

@@ -2,19 +2,36 @@ import React, { useState, useEffect } from 'react'
 import {
   Box, Typography, Button, Paper,
   Table, TableHead, TableBody,
-  TableRow, TableCell, Dialog, DialogActions,
-  DialogContent, DialogTitle, TextField, Menu,
+  TableRow, TableCell, TextField, Menu,
   MenuItem, List, ListItem, ListItemText, Divider,
   InputAdornment, IconButton, Snackbar, Alert
 } from '@mui/material'
+import BaseModal from '../components/BaseModal'
 import ShareIcon from '@mui/icons-material/Share'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { usePageTitle } from '../utils/usePageTitle'
 import PageContainer from '../components/layout/PageContainer'
 
 const API_URL = '/api/hec-ras/'
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  } catch {
+    return iso;
+  }
+}
 
 export default function HecRasProjects() {
   const { t } = useTranslation()
@@ -29,8 +46,8 @@ export default function HecRasProjects() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploadError, setUploadError] = useState('')
 
-  // Состояния для контекстного меню
-  const [contextMenu, setContextMenu] = useState(null)
+  // Состояния для меню
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null)
   const [selectedProject, setSelectedProject] = useState(null)
 
   // Состояния для модальных окон
@@ -118,22 +135,15 @@ export default function HecRasProjects() {
     }
   }
 
-  // Обработка контекстного меню
-  const handleContextMenu = (event, project) => {
-    event.preventDefault()
+  // Обработка меню троеточия
+  const handleMenuOpen = (event, project) => {
+    event.stopPropagation()
     setSelectedProject(project)
-    setContextMenu(
-      contextMenu === null
-        ? {
-            mouseX: event.clientX + 2,
-            mouseY: event.clientY - 6,
-          }
-        : null,
-    )
+    setMenuAnchorEl(event.currentTarget)
   }
 
   const handleCloseContextMenu = () => {
-    setContextMenu(null)
+    setMenuAnchorEl(null)
   }
 
   const handleDeleteClick = () => {
@@ -375,134 +385,14 @@ export default function HecRasProjects() {
         </Button>
 
         {/* Модальное окно для добавления проекта */}
-        <Dialog open={openAdd} onClose={handleCloseAdd} PaperProps={{ component: 'form' }}>
-          <DialogTitle>{t('hec.addTitle', 'Добавить HEC-RAS проект')}</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              required
-              margin="dense"
-              id="name"
-              label={t('hec.name', 'Название проекта')}
-              type="text"
-              fullWidth
-              variant="standard"
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-            />
-            <Button
-              variant="outlined"
-              component="label"
-              sx={{ mt: 2 }}
-            >
-              {t('hec.selectFile', 'Выбрать .db файл')}
-              <input
-                type="file"
-                hidden
-                required
-                accept=".db"
-                onChange={handleFileChange}
-              />
-            </Button>
-            {selectedFile && <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>}
-            {uploadError && <Typography color="error" sx={{ mt: 2 }}>{uploadError}</Typography>}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseAdd}>{t('hec.cancel', 'Отмена')}</Button>
-            <Button type="button" onClick={handleUpload}>{t('hec.save', 'Сохранить')}</Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    )
-  }
-
-  // Состояние со списком файлов
-  return (
-    <PageContainer>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">
-          {t('hec.title')}
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={handleClickOpen}
+        <BaseModal
+          open={openAdd}
+          onClose={handleCloseAdd}
+          title={t('hec.addTitle', 'Добавить HEC-RAS проект')}
+          confirmText={t('hec.save', 'Сохранить')}
+          onConfirm={handleUpload}
+          cancelText={t('hec.cancel', 'Отмена')}
         >
-          {t('hec.add')}
-        </Button>
-      </Box>
-
-      <Paper sx={{ mb: 2, overflowX: 'auto' }}>
-        <Table>
-          <TableHead>
-            <TableRow
-              onContextMenu={(e) => handleContextMenu(e, null)}
-              sx={{ cursor: 'context-menu' }}
-            >
-              <TableCell>{t('hec.table.name', 'Название')}</TableCell>
-              <TableCell>{t('hec.table.created', 'Дата создания')}</TableCell>
-              <TableCell align="right">{t('hec.table.actions', 'Действия')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {projects.map(proj => (
-              <TableRow 
-                key={proj.id}
-                onContextMenu={(e) => handleContextMenu(e, proj)}
-                sx={{ cursor: 'context-menu' }}
-              >
-                <TableCell>{proj.name}</TableCell>
-                <TableCell>
-                  {new Date(proj.created_at).toLocaleString()}
-                </TableCell>
-                <TableCell align="right">
-                  <Button
-                    size="small"
-                    onClick={() => navigate(`/app/hec-ras/${proj.id}`)}
-                    sx={{ mr: 1 }}
-                  >
-                    {t('hec.view', 'Посмотреть')}
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<ShareIcon />}
-                    onClick={() => handleShareClick(proj)}
-                    variant="outlined"
-                  >
-                    {t('hec.share', 'Поделиться')}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-
-      {/* Контекстное меню */}
-      <Menu
-        open={contextMenu !== null}
-        onClose={handleCloseContextMenu}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenu !== null
-            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-            : undefined
-        }
-      >
-        <MenuItem onClick={handleDeleteClick} disabled={!selectedProject}>
-          {t('hec.delete', 'Удалить')}
-        </MenuItem>
-        <MenuItem onClick={handleRenameClick} disabled={!selectedProject}>
-          {t('hec.rename', 'Переименовать')}
-        </MenuItem>
-        <MenuItem onClick={handlePropertiesClick} disabled={!selectedProject}>
-          {t('hec.properties', 'Свойства')}
-        </MenuItem>
-      </Menu>
-
-      {/* Модальное окно для добавления проекта */}
-      <Dialog open={openAdd} onClose={handleCloseAdd} PaperProps={{ component: 'form' }}>
-        <DialogTitle>{t('hec.addTitle', 'Добавить HEC-RAS проект')}</DialogTitle>
-        <DialogContent>
           <TextField
             autoFocus
             required
@@ -531,67 +421,183 @@ export default function HecRasProjects() {
           </Button>
           {selectedFile && <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>}
           {uploadError && <Typography color="error" sx={{ mt: 2 }}>{uploadError}</Typography>}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAdd}>{t('hec.cancel', 'Отмена')}</Button>
-          <Button type="button" onClick={handleUpload}>{t('hec.save', 'Сохранить')}</Button>
-        </DialogActions>
-      </Dialog>
+        </BaseModal>
+      </Box>
+    )
+  }
+
+  // Состояние со списком файлов
+  return (
+    <PageContainer>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5">
+          {t('hec.title')}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={handleClickOpen}
+        >
+          {t('hec.add')}
+        </Button>
+      </Box>
+
+      <Paper sx={{ mb: 2, overflowX: 'auto' }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>{t('hec.table.name', 'Название')}</TableCell>
+              <TableCell>{t('hec.table.created', 'Дата создания')}</TableCell>
+              <TableCell align="right">{t('hec.table.actions', 'Действия')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {projects.map(proj => (
+              <TableRow key={proj.id}>
+                <TableCell>{proj.name}</TableCell>
+                <TableCell>
+                  {fmtDateTime(proj.created_at)}
+                </TableCell>
+                <TableCell align="right">
+                  <Button
+                    size="small"
+                    onClick={() => navigate(`/app/hec-ras/${proj.id}`)}
+                    sx={{ mr: 1 }}
+                  >
+                    {t('hec.view', 'Посмотреть')}
+                  </Button>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleMenuOpen(e, proj)}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+
+      {/* Меню троеточия */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleCloseContextMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => { handleCloseContextMenu(); handleShareClick(selectedProject) }}>
+          {t('hec.share', 'Поделиться')}
+        </MenuItem>
+        <MenuItem onClick={handleRenameClick}>
+          {t('hec.rename', 'Переименовать')}
+        </MenuItem>
+        <MenuItem onClick={handlePropertiesClick}>
+          {t('hec.properties', 'Свойства')}
+        </MenuItem>
+        <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+          {t('hec.delete', 'Удалить')}
+        </MenuItem>
+      </Menu>
+
+      {/* Модальное окно для добавления проекта */}
+      <BaseModal
+        open={openAdd}
+        onClose={handleCloseAdd}
+        title={t('hec.addTitle', 'Добавить HEC-RAS проект')}
+        confirmText={t('hec.save', 'Сохранить')}
+        onConfirm={handleUpload}
+        cancelText={t('hec.cancel', 'Отмена')}
+      >
+        <TextField
+          autoFocus
+          required
+          margin="dense"
+          id="name"
+          label={t('hec.name', 'Название проекта')}
+          type="text"
+          fullWidth
+          variant="standard"
+          value={newProjectName}
+          onChange={(e) => setNewProjectName(e.target.value)}
+        />
+        <Button
+          variant="outlined"
+          component="label"
+          sx={{ mt: 2 }}
+        >
+          {t('hec.selectFile', 'Выбрать .db файл')}
+          <input
+            type="file"
+            hidden
+            required
+            accept=".db"
+            onChange={handleFileChange}
+          />
+        </Button>
+        {selectedFile && <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>}
+        {uploadError && <Typography color="error" sx={{ mt: 2 }}>{uploadError}</Typography>}
+      </BaseModal>
 
       {/* Модальное окно подтверждения удаления */}
-      <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
-        <DialogTitle>{t('hec.deleteConfirmTitle', 'Подтверждение удаления')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('hec.deleteConfirm', 'Вы уверены, что хотите удалить этот файл?')}
+      <BaseModal
+        open={openDelete}
+        onClose={() => setOpenDelete(false)}
+        title={t('hec.deleteConfirmTitle', 'Подтверждение удаления')}
+        confirmText={t('hec.definitelyDelete', 'Точно удалить')}
+        onConfirm={handleDeleteConfirm}
+        confirmColor="error"
+        cancelText={t('hec.cancel', 'Отмена')}
+      >
+        <Typography>
+          {t('hec.deleteConfirm', 'Вы уверены, что хотите удалить этот файл?')}
+        </Typography>
+        {selectedProject && (
+          <Typography sx={{ mt: 1, fontWeight: 'bold' }}>
+            {selectedProject.name}
           </Typography>
-          {selectedProject && (
-            <Typography sx={{ mt: 1, fontWeight: 'bold' }}>
-              {selectedProject.name}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDelete(false)}>{t('hec.cancel', 'Отмена')}</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            {t('hec.definitelyDelete', 'Точно удалить')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        )}
+      </BaseModal>
 
       {/* Модальное окно переименования */}
-      <Dialog open={openRename} onClose={() => setOpenRename(false)}>
-        <DialogTitle>{t('hec.renameTitle', 'Переименовать файл')}</DialogTitle>
-        <DialogContent>
-          <TextField
-            label={t('hec.oldName', 'Старое название')}
-            value={selectedProject?.name || ''}
-            fullWidth
-            margin="dense"
-            disabled
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            autoFocus
-            label={t('hec.newName', 'Новое название')}
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            fullWidth
-            margin="dense"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenRename(false)}>{t('hec.cancel', 'Отмена')}</Button>
-          <Button onClick={handleRenameConfirm} variant="contained">
-            {t('hec.save', 'Сохранить')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <BaseModal
+        open={openRename}
+        onClose={() => setOpenRename(false)}
+        title={t('hec.renameTitle', 'Переименовать файл')}
+        confirmText={t('hec.save', 'Сохранить')}
+        onConfirm={handleRenameConfirm}
+        cancelText={t('hec.cancel', 'Отмена')}
+      >
+        <TextField
+          label={t('hec.oldName', 'Старое название')}
+          value={selectedProject?.name || ''}
+          fullWidth
+          margin="dense"
+          disabled
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          autoFocus
+          label={t('hec.newName', 'Новое название')}
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          fullWidth
+          margin="dense"
+        />
+      </BaseModal>
 
       {/* Модальное окно для шаринга */}
-      <Dialog open={openShare} onClose={handleCloseShare} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('hec.shareTitle', 'Поделиться проектом')}</DialogTitle>
-        <DialogContent>
+      <BaseModal
+        open={openShare}
+        onClose={handleCloseShare}
+        title={t('hec.shareTitle', 'Поделиться проектом')}
+        maxWidth="sm"
+        actions={
+          <Button onClick={handleCloseShare} variant="outlined">
+            {t('hec.cancel', 'Отмена')}
+          </Button>
+        }
+      >
           {!shareProject?.share_hash ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
@@ -687,10 +693,10 @@ export default function HecRasProjects() {
                   sx={{ mb: 2 }}
                 >
                   {showPasswordInput && !shareProject.has_password 
-                    ? t('hec.add', 'Добавить')
+                    ? t('hec.setPassword', 'Установить пароль')
                     : shareProject.has_password 
                     ? t('hec.removePassword', 'Удалить пароль')
-                    : t('hec.add', 'Добавить')}
+                    : t('hec.setPassword', 'Установить пароль')}
                 </Button>
               )}
               
@@ -706,11 +712,7 @@ export default function HecRasProjects() {
               </Button>
             </>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseShare}>{t('hec.cancel', 'Отмена')}</Button>
-        </DialogActions>
-      </Dialog>
+      </BaseModal>
 
       {/* Уведомление о копировании */}
       <Snackbar
@@ -725,9 +727,17 @@ export default function HecRasProjects() {
       </Snackbar>
 
       {/* Модальное окно свойств */}
-      <Dialog open={openProperties} onClose={() => setOpenProperties(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{t('hec.propertiesTitle', 'Свойства файла')}</DialogTitle>
-        <DialogContent>
+      <BaseModal
+        open={openProperties}
+        onClose={() => setOpenProperties(false)}
+        title={t('hec.propertiesTitle', 'Свойства файла')}
+        maxWidth="md"
+        actions={
+          <Button onClick={() => setOpenProperties(false)} variant="outlined">
+            {t('hec.cancel', 'Отмена')}
+          </Button>
+        }
+      >
           {propertiesData && (
             <List>
               {/* Основная информация */}
@@ -748,16 +758,7 @@ export default function HecRasProjects() {
               <ListItem>
                 <ListItemText 
                   primary={t('hec.dateAdded', 'Дата добавления')}
-                  secondary={(() => {
-                    const date = new Date(propertiesData.created_at);
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const year = date.getFullYear();
-                    const hours = String(date.getHours()).padStart(2, '0');
-                    const minutes = String(date.getMinutes()).padStart(2, '0');
-                    const seconds = String(date.getSeconds()).padStart(2, '0');
-                    return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
-                  })()}
+                  secondary={fmtDateTime(propertiesData.created_at)}
                 />
               </ListItem>
               <Divider />
@@ -951,11 +952,7 @@ export default function HecRasProjects() {
               )}
             </List>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenProperties(false)}>{t('hec.cancel', 'Отмена')}</Button>
-        </DialogActions>
-      </Dialog>
+      </BaseModal>
     </PageContainer>
   )
 }

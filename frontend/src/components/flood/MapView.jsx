@@ -65,6 +65,8 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import LayersIcon from '@mui/icons-material/Layers';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import InputAdornment from '@mui/material/InputAdornment';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -108,7 +110,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
       },
     },
     '& .MuiInputLabel-root': {
-      color: '#9e9e9e',
+      color: 'text.disabled',
       '&.Mui-focused': {
         color: '#8ab4f8',
       },
@@ -122,6 +124,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
   };
   const [selectedFile, setSelectedFile] = useState(null);
   const [expandedAccordion, setExpandedAccordion] = useState(null); // null = все закрыты, 'elevation', 'landCover', 'rainfall', 'infiltration', 'soilMoisture', 'channels', 'coast', 'reservoir', 'upscaling', 'viewer' или 'calibration' = открыт
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [landCoverInputType, setLandCoverInputType] = useState('single');
   const [manningValue, setManningValue] = useState('0.06');
   const [manningFile, setManningFile] = useState(null);
@@ -173,7 +176,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
   const [drawDetail, setDrawDetail] = useState('High');
   const [maxWaterHeightView, setMaxWaterHeightView] = useState('10');
   const [floodExtentFile, setFloodExtentFile] = useState(null);
-  const [floodExtentColor, setFloodExtentColor] = useState('#1976d2');
+  const [floodExtentColor, setFloodExtentColor] = useState('#0077B6');
   const [osmBuildingsRoadsFile, setOsmBuildingsRoadsFile] = useState(null);
   const [importBuildingsFile, setImportBuildingsFile] = useState(null);
   const [importRoadsFile, setImportRoadsFile] = useState(null);
@@ -223,6 +226,22 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
   const waterLevelLayerRef = useRef(null); // Ref для хранения информации о слое уровня воды (для симуляции)
   const accordionContainerRef = useRef(null); // Ref для контейнера с аккордеонами
   const terrainListenersRef = useRef({}); // Реестр слушателей событий для terrain слоев: { [sourceId]: { onError, onSourceData } }
+
+  useEffect(() => {
+    if (expandedAccordion && accordionContainerRef.current) {
+      const timer = setTimeout(() => {
+        const container = accordionContainerRef.current;
+        if (!container) return;
+        const expanded = container.querySelector('.Mui-expanded.MuiAccordion-root');
+        if (!expanded) return;
+        const containerRect = container.getBoundingClientRect();
+        const elRect = expanded.getBoundingClientRect();
+        const offset = elRect.top - containerRect.top + container.scrollTop;
+        container.scrollTo({ top: offset, behavior: 'smooth' });
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [expandedAccordion]);
 
   // Гарантируем, что uploadingFile и downloading сбрасываются при монтировании компонента
   useEffect(() => {
@@ -757,7 +776,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         type: 'fill',
         source: 'aoi-rectangle',
         paint: {
-          'fill-color': '#1976d2',
+          'fill-color': '#0077B6',
           'fill-opacity': 0.2
         }
       });
@@ -768,7 +787,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         type: 'line',
         source: 'aoi-rectangle',
         paint: {
-          'line-color': '#1976d2',
+          'line-color': '#0077B6',
           'line-width': 2,
           'line-dasharray': [2, 2]
         }
@@ -3193,32 +3212,61 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
       {/* Выпадающие меню - скрыты в shared режиме */}
       {!propShareHash && (
       <Box
-        ref={accordionContainerRef}
         sx={{
           position: 'absolute',
-          top: 20,
-          left: 20,
+          top: 0,
+          left: 0,
+          height: '100%',
+          width: 300,
           zIndex: 1000,
           display: 'flex',
-          flexDirection: 'column',
-          gap: 0,
-          width: 280,
-          maxHeight: 'calc(100vh - 240px)',
-          overflowY: 'auto',
-          overflowX: 'visible',
-          boxSizing: 'border-box',
-          paddingBottom: 2,
-          marginBottom: 2,
-          '&::-webkit-scrollbar': {
-            display: 'none',
-          },
-          scrollbarWidth: 'none', // Firefox
-          msOverflowStyle: 'none', // IE and Edge
+          alignItems: 'center',
+          transition: 'transform 1s',
+          transform: sidebarCollapsed ? 'translateX(-275px)' : 'translateX(0)',
         }}
-        className="no-scrollbar"
       >
+        <Paper
+          sx={{
+            width: '95%',
+            height: '95%',
+            borderRadius: 2,
+            boxShadow: 'none',
+            color: 'rgba(0, 0, 0, 1)',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            backgroundColor: 'white',
+            overflow: 'hidden',
+            marginLeft: '20px',
+          }}
+        >
+          <Box
+            ref={accordionContainerRef}
+            sx={{
+              width: '100%',
+              flex: 1,
+              minHeight: 0,
+              padding: 2,
+              overflowY: 'auto',
+              '&::-webkit-scrollbar': {
+                width: '4px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#BDBDBD',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: '#9E9E9E',
+              },
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#BDBDBD transparent',
+            }}
+          >
         {/* Аккордеон Elevation */}
-        <Paper elevation={1} sx={{ margin: 0, borderRadius: 0, overflow: 'visible', '&:not(:last-child)': { marginBottom: 0 } }}>
+        <Paper elevation={0} sx={{ margin: 0, borderRadius: 0, overflow: 'visible', borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="elevation"
             expanded={expandedAccordion === 'elevation'}
@@ -3234,17 +3282,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
-                borderTopLeftRadius: 0,
-                borderTopRightRadius: 0,
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -3256,7 +3302,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <TerrainIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <TerrainIcon sx={{ color: '#6D4C41', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -3282,7 +3328,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -3391,24 +3437,24 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     sx={{
                       textTransform: 'none',
                       backgroundColor: terrainLayerId 
-                        ? '#d32f2f' 
-                        : (aoiActive ? '#4F46E5' : '#6366F1'),
+                        ? 'error.main' 
+                        : (aoiActive ? 'primary.dark' : 'primary.main'),
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
                       boxShadow: terrainLayerId 
                         ? '0 4px 14px 0 rgba(211, 47, 47, 0.39)'
-                        : '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                        : '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       minWidth: 0,
                       boxSizing: 'border-box',
                       '&:hover': {
                         backgroundColor: terrainLayerId 
-                          ? '#c62828' 
-                          : (aoiActive ? '#4338CA' : '#4F46E5'),
+                          ? 'error.dark' 
+                          : (aoiActive ? 'primary.dark' : 'primary.dark'),
                         boxShadow: terrainLayerId 
                           ? '0 6px 20px 0 rgba(211, 47, 47, 0.5)'
-                          : '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                          : '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -3423,20 +3469,20 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     onClick={() => setFiltersDialogOpen(true)}
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: terrainLayerId ? '#6366F1' : '#9e9e9e',
+                      backgroundColor: terrainLayerId ? 'primary.main' : 'text.disabled',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: terrainLayerId ? '0 4px 14px 0 rgba(99, 102, 241, 0.39)' : 'none',
+                      boxShadow: terrainLayerId ? '0 4px 14px 0 rgba(0, 119, 182, 0.39)' : 'none',
                       fontWeight: 600,
                       minWidth: 0,
                       boxSizing: 'border-box',
                       '&:hover': {
-                        backgroundColor: terrainLayerId ? '#4F46E5' : '#9e9e9e',
-                        boxShadow: terrainLayerId ? '0 6px 20px 0 rgba(99, 102, 241, 0.5)' : 'none',
+                        backgroundColor: terrainLayerId ? 'primary.dark' : 'text.disabled',
+                        boxShadow: terrainLayerId ? '0 6px 20px 0 rgba(0, 119, 182, 0.45)' : 'none',
                       },
                       '&:disabled': {
-                        backgroundColor: '#9e9e9e',
+                        backgroundColor: 'text.disabled',
                         color: '#FFFFFF',
                       },
                     }}
@@ -3450,7 +3496,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Land Cover */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="landCover"
             expanded={expandedAccordion === 'landCover'}
@@ -3465,15 +3511,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -3485,7 +3531,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <ParkIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <ParkIcon sx={{ color: '#2E7D32', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -3511,7 +3557,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -3531,17 +3577,17 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   >
                     <FormControlLabel 
                       value="single" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.landCover.singleManning')} 
                     />
                     <FormControlLabel 
                       value="map" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.landCover.manningMap')} 
                     />
                     <FormControlLabel 
                       value="lu" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.landCover.landUseMap')} 
                     />
                   </RadioGroup>
@@ -3581,7 +3627,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                         backgroundColor: '#F9FAFB',
                         borderRadius: '12px',
                         '&:hover': {
-                          borderColor: '#6366F1',
+                          borderColor: 'primary.main',
                           backgroundColor: '#FFFFFF',
                         },
                       }}
@@ -3602,44 +3648,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   </Box>
                 )}
 
-                {/* Input LU classes (для Land Use Class Map) */}
-                {landCoverInputType === 'lu' && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      {t('floodModeling.inputLuClasses')}
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      size="small"
-                      fullWidth
-                      sx={{
-                        textTransform: 'none',
-                        borderColor: '#E5E7EB',
-                        color: '#424242',
-                        backgroundColor: '#F9FAFB',
-                        borderRadius: '12px',
-                        '&:hover': {
-                          borderColor: '#6366F1',
-                          backgroundColor: '#FFFFFF',
-                        },
-                      }}
-                    >
-                      {luClassesFile ? luClassesFile.name : 'Выберите файл'}
-                      <input
-                        type="file"
-                        hidden
-                        accept=".tif,.tiff,.geotiff"
-                        onChange={(e) => setLuClassesFile(e.target.files?.[0] || null)}
-                      />
-                    </Button>
-                    {!luClassesFile && (
-                      <Typography variant="caption" sx={{ color: '#9E9E9E', mt: 0.5, display: 'block' }}>
-                        {t('common.fileNotSelected')}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
 
                 {/* Multiplier */}
                 <Box>
@@ -3656,6 +3664,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                 </Box>
 
                 {/* Auto Download Button */}
+                {landCoverInputType === 'lu' && (
                 <Button
                   variant="contained"
                   fullWidth
@@ -3676,16 +3685,17 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   }}
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
                   {t('floodModeling.landCover.autoDownload')}
                 </Button>
+                )}
 
                 {/* Таблица классов и коэффициентов Manning */}
                 <TableContainer>
@@ -3725,7 +3735,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Rainfall */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="rainfall"
             expanded={expandedAccordion === 'rainfall'}
@@ -3740,15 +3750,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -3760,7 +3770,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <CloudQueueIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <CloudQueueIcon sx={{ color: '#0284C7', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -3786,7 +3796,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -3806,12 +3816,12 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   >
                     <FormControlLabel 
                       value="single" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.rainfall.singleIntensity')} 
                     />
                     <FormControlLabel 
                       value="map" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.rainfall.intensityMap')} 
                     />
                   </RadioGroup>
@@ -3859,7 +3869,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                         backgroundColor: '#F9FAFB',
                         borderRadius: '12px',
                         '&:hover': {
-                          borderColor: '#6366F1',
+                          borderColor: 'primary.main',
                           backgroundColor: '#FFFFFF',
                         },
                       }}
@@ -3939,11 +3949,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -3955,7 +3965,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Infiltration */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="infiltration"
             expanded={expandedAccordion === 'infiltration'}
@@ -3970,15 +3980,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -3990,7 +4000,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <SettingsIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <SettingsIcon sx={{ color: '#D97706', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -4016,7 +4026,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -4032,7 +4042,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={includeInfiltration}
                           onChange={(e) => setIncludeInfiltration(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                   label={t('floodModeling.infiltration.include')}
@@ -4093,11 +4102,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -4109,7 +4118,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Soil Moisture */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="soilMoisture"
             expanded={expandedAccordion === 'soilMoisture'}
@@ -4124,15 +4133,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -4144,7 +4153,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <WaterDropIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <WaterDropIcon sx={{ color: '#0891B2', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -4170,7 +4179,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -4187,7 +4196,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={includeSoilMoisture}
                           onChange={(e) => setIncludeSoilMoisture(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label="Include Soil Moisture"
@@ -4198,7 +4206,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={singleValue}
                           onChange={(e) => setSingleValue(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label={t('floodModeling.soilMoisture.singleValue')}
@@ -4224,11 +4231,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -4349,7 +4356,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Channels */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="channels"
             expanded={expandedAccordion === 'channels'}
@@ -4364,15 +4371,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -4384,7 +4391,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <DeleteIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <DeleteIcon sx={{ color: '#0369A1', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -4410,7 +4417,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -4430,17 +4437,17 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   >
                     <FormControlLabel 
                       value="none" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.channels.none')} 
                     />
                     <FormControlLabel 
                       value="automatic" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.channels.automatic')} 
                     />
                     <FormControlLabel 
                       value="map" 
-                      control={<Radio size="small" sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }} />} 
+                      control={<Radio size="small" />} 
                       label={t('floodModeling.channels.map')} 
                     />
                   </RadioGroup>
@@ -4530,15 +4537,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     fullWidth
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: '#6366F1',
+                      backgroundColor: 'primary.main',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                      boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       '&:hover': {
-                        backgroundColor: '#4F46E5',
-                        boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                        backgroundColor: 'primary.dark',
+                        boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -4549,15 +4556,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     fullWidth
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: '#6366F1',
+                      backgroundColor: 'primary.main',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                      boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       '&:hover': {
-                        backgroundColor: '#4F46E5',
-                        boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                        backgroundColor: 'primary.dark',
+                        boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -4658,7 +4665,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={includeBaseflow}
                           onChange={(e) => setIncludeBaseflow(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label="Include baseflow condition"
@@ -4698,7 +4704,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={monodirectionalChannels}
                           onChange={(e) => setMonodirectionalChannels(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label={t('floodModeling.channels.monodirectional')}
@@ -4735,7 +4740,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={outputChannelShape}
                           onChange={(e) => setOutputChannelShape(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label="Output channel shape (Overwrites!)"
@@ -4746,7 +4750,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={useEditedChannelRoutes}
                           onChange={(e) => setUseEditedChannelRoutes(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label="Use edited channel routes"
@@ -4758,7 +4761,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Coast */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="coast"
             expanded={expandedAccordion === 'coast'}
@@ -4773,15 +4776,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -4793,7 +4796,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <WavesIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <WavesIcon sx={{ color: '#0077B6', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -4819,7 +4822,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -4835,7 +4838,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={includeOceanBoundary}
                           onChange={(e) => setIncludeOceanBoundary(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                   label={t('floodModeling.coast.includeOcean')}
@@ -4870,14 +4872,14 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -4892,7 +4894,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Reservoir */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="reservoir"
             expanded={expandedAccordion === 'reservoir'}
@@ -4907,15 +4909,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -4927,7 +4929,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <StorageIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <StorageIcon sx={{ color: '#7C3AED', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -4953,7 +4955,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -4995,7 +4997,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Upscaling */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="upscaling"
             expanded={expandedAccordion === 'upscaling'}
@@ -5010,15 +5012,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -5030,7 +5032,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <GridOnIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <GridOnIcon sx={{ color: '#64748B', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -5056,7 +5058,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -5078,7 +5080,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={inputFromOtherArea}
                           onChange={(e) => setInputFromOtherArea(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label={t('floodModeling.upscaling.inputFromOtherArea')}
@@ -5107,7 +5108,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={inputFromFile}
                           onChange={(e) => setInputFromFile(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                   label={t('floodModeling.upscaling.inputFromFile')}
@@ -5128,7 +5128,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                         backgroundColor: '#F9FAFB',
                         borderRadius: '12px',
                         '&:hover': {
-                          borderColor: '#6366F1',
+                          borderColor: 'primary.main',
                           backgroundColor: '#FFFFFF',
                         },
                       }}
@@ -5167,7 +5167,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Viewer */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0 }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="viewer"
             expanded={expandedAccordion === 'viewer'}
@@ -5182,15 +5182,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -5202,7 +5202,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <VisibilityIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <VisibilityIcon sx={{ color: '#EA580C', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -5228,7 +5228,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -5243,11 +5243,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -5300,15 +5300,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     fullWidth
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: '#6366F1',
+                      backgroundColor: 'primary.main',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                      boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       '&:hover': {
-                        backgroundColor: '#4F46E5',
-                        boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                        backgroundColor: 'primary.dark',
+                        boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -5319,15 +5319,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     fullWidth
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: '#6366F1',
+                      backgroundColor: 'primary.main',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                      boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       '&:hover': {
-                        backgroundColor: '#4F46E5',
-                        boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                        backgroundColor: 'primary.dark',
+                        boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -5338,15 +5338,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     fullWidth
                     sx={{
                       textTransform: 'none',
-                      backgroundColor: '#6366F1',
+                      backgroundColor: 'primary.main',
                       color: '#FFFFFF',
                       py: 1.5,
                       borderRadius: '12px',
-                      boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                      boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
                       fontWeight: 600,
                       '&:hover': {
-                        backgroundColor: '#4F46E5',
-                        boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
+                        backgroundColor: 'primary.dark',
+                        boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
                       },
                     }}
                   >
@@ -5411,11 +5411,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -5502,7 +5502,6 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                           checked={calculateExposure}
                           onChange={(e) => setCalculateExposure(e.target.checked)}
                           size="small"
-                          sx={{ color: '#6366F1', '&.Mui-checked': { color: '#6366F1' } }}
                         />
                       }
                     label="Calculate Exposure"
@@ -5537,11 +5536,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -5553,7 +5552,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
         </Paper>
 
         {/* Аккордеон Calibration */}
-        <Paper elevation={1} sx={{ margin: 0, marginTop: 0, borderRadius: 0, overflow: 'hidden' }}>
+        <Paper elevation={0} sx={{ margin: 0, marginTop: 0, borderRadius: 0, overflow: 'hidden', borderBottom: '1px solid #E0E0E0' }}>
           <Accordion
             data-accordion-id="calibration"
             expanded={expandedAccordion === 'calibration'}
@@ -5568,23 +5567,15 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: '#F3F4F6',
+                backgroundColor: 'white',
                 px: 2,
                 py: 1,
                 transition: 'background-color 0.2s ease',
-                borderBottomLeftRadius: 0,
-                borderBottomRightRadius: 0,
-                '&:not(.Mui-expanded)': {
-                  borderBottomLeftRadius: 0,
-                  borderBottomRightRadius: 0,
-                },
                 '&:hover': {
-                  backgroundColor: '#E5E7EB',
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '&.Mui-expanded': {
-                  backgroundColor: '#E5E7EB',
-                  borderBottomLeftRadius: 0,
-                  borderBottomRightRadius: 0,
+                  backgroundColor: 'rgba(0, 119, 182, 0.08)',
                 },
                 '& .MuiAccordionSummary-content': {
                   margin: 0,
@@ -5596,7 +5587,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <GpsFixedIcon sx={{ color: '#6366F1', fontSize: 24 }} />
+                <GpsFixedIcon sx={{ color: '#DC2626', fontSize: 24 }} />
                 <Typography sx={{ 
                   fontWeight: 500, 
                   color: '#424242',
@@ -5622,7 +5613,7 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+                    '&:hover': { backgroundColor: 'rgba(0, 119, 182, 0.1)' }
                   }}
                 >
                   <InfoIcon sx={{ fontSize: 18, color: '#757575' }} />
@@ -5697,11 +5688,11 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
                   fullWidth
                   sx={{
                     textTransform: 'none',
-                    backgroundColor: '#1976d2',
+                    backgroundColor: 'primary.main',
                     color: '#FFFFFF',
                     py: 1.5,
                     '&:hover': {
-                      backgroundColor: '#1565c0',
+                      backgroundColor: 'primary.dark',
                     },
                   }}
                 >
@@ -5716,68 +5707,48 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             </AccordionDetails>
           </Accordion>
         </Paper>
+
+          </Box>
+
+        {!propShareHash && (
+        <Box
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            p: 2,
+            flexShrink: 0,
+            background: 'transparent',
+          }}
+        >
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleSimulate}
+            sx={{
+              textTransform: 'none',
+              backgroundColor: 'primary.main',
+              color: '#FFFFFF',
+              py: 2,
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: '12px',
+              boxShadow: '0 4px 14px 0 rgba(0, 119, 182, 0.39)',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+                boxShadow: '0 6px 20px 0 rgba(0, 119, 182, 0.45)',
+              },
+            }}
+          >
+            {t('floodModeling.simulate.button')}
+          </Button>
+        </Box>
+        )}
+        </Paper>
       </Box>
       )}
 
-      {/* Кнопки Simulate и Share - скрыты в shared режиме */}
-      {!propShareHash && (
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          zIndex: 1000,
-          width: 250,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 1,
-        }}
-      >
-        <Button
-          variant="contained"
-          fullWidth
-          onClick={handleSimulate}
-          sx={{
-            textTransform: 'none',
-            backgroundColor: '#6366F1',
-            color: '#FFFFFF',
-            py: 2,
-            fontSize: '1rem',
-            fontWeight: 600,
-            borderRadius: '12px',
-            boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
-            '&:hover': {
-              backgroundColor: '#4F46E5',
-              boxShadow: '0 6px 20px 0 rgba(99, 102, 241, 0.5)',
-            },
-          }}
-        >
-          {t('floodModeling.simulate.button')}
-        </Button>
-        <Button
-          variant="outlined"
-          fullWidth
-          onClick={handleShareClick}
-          startIcon={<ShareIcon />}
-          sx={{
-            textTransform: 'none',
-            borderColor: '#6366F1',
-            color: '#6366F1',
-            backgroundColor: '#FFFFFF',
-            py: 1.5,
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            borderRadius: '12px',
-            '&:hover': {
-              borderColor: '#4F46E5',
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-            },
-          }}
-        >
-          {t('floodModeling.share')}
-        </Button>
-      </Box>
-      )}
 
       {/* Модальное окно для шаринга */}
       <Dialog open={openShare} onClose={handleCloseShare} maxWidth="sm" fullWidth>
@@ -5958,9 +5929,9 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               borderRadius: '8px',
               px: 3,
               py: 1,
-              background: 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
+              background: 'linear-gradient(135deg, #48CAE4 0%, #0077B6 100%)',
               '&:hover': {
-                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(135deg, #0077B6 0%, #0369A1 100%)',
               },
               '&:disabled': {
                 backgroundColor: '#bdbdbd',
@@ -5988,9 +5959,9 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
               borderRadius: '8px',
               px: 3,
               py: 1,
-              background: 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
+              background: 'linear-gradient(135deg, #48CAE4 0%, #0077B6 100%)',
               '&:hover': {
-                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                background: 'linear-gradient(135deg, #0077B6 0%, #0369A1 100%)',
               },
               '&:disabled': {
                 backgroundColor: '#bdbdbd',
@@ -6033,12 +6004,12 @@ export default function MapView({ sharedProjectData = null, shareHash: propShare
             target="_blank"
             rel="noopener noreferrer"
             sx={{
-              color: '#6366F1',
+              color: 'primary.main',
               textDecoration: 'underline',
               cursor: 'pointer',
               mt: 1,
               '&:hover': {
-                color: '#4F46E5',
+                color: 'primary.dark',
               },
             }}
           >
