@@ -3,10 +3,20 @@ import {
   Box, Typography, CircularProgress, Alert, GlobalStyles, LinearProgress,
 } from '@mui/material';
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-  LineElement, BarElement, Title, Tooltip, Filler, Legend,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  BarController,
+  LineController,
+  Title,
+  Tooltip,
+  Filler,
+  Legend,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import WbSunnyIcon      from '@mui/icons-material/WbSunny';
 import CloudIcon        from '@mui/icons-material/Cloud';
 import AirIcon          from '@mui/icons-material/Air';
@@ -21,8 +31,17 @@ import { usePageTitle }   from '../utils/usePageTitle';
 import PageContainer      from '../components/layout/PageContainer';
 
 ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, Title, Tooltip, Filler, Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  BarController,
+  LineController,
+  Title,
+  Tooltip,
+  Filler,
+  Legend,
 );
 
 /* ─── Gradient plugin for Chart.js ─────────────────────── */
