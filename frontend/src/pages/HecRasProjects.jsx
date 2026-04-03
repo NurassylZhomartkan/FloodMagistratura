@@ -4,7 +4,8 @@ import {
   Table, TableHead, TableBody,
   TableRow, TableCell, TextField, Menu,
   MenuItem, List, ListItem, ListItemText, Divider,
-  InputAdornment, IconButton, Snackbar, Alert
+  InputAdornment, IconButton, Snackbar, Alert,
+  CircularProgress,
 } from '@mui/material'
 import BaseModal from '../components/BaseModal'
 import ShareIcon from '@mui/icons-material/Share'
@@ -16,6 +17,64 @@ import { usePageTitle } from '../utils/usePageTitle'
 import PageContainer from '../components/layout/PageContainer'
 
 const API_URL = '/api/hec-ras/'
+
+/** Согласовано с `client_max_body_size` в docker/nginx/default.conf (512m). */
+const MAX_HECRAS_UPLOAD_BYTES = 512 * 1024 * 1024
+
+function detailFromJson(data) {
+  if (!data || typeof data !== 'object') return null
+  const d = data.detail
+  if (typeof d === 'string') return d
+  if (Array.isArray(d)) {
+    const msgs = d.map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object' && typeof item.msg === 'string') return item.msg
+      return null
+    }).filter(Boolean)
+    if (msgs.length) return msgs.join(' ')
+  }
+  if (d != null && typeof d !== 'object') return String(d)
+  return null
+}
+
+/**
+ * Безопасно извлекает сообщение об ошибке из ответа (JSON, текст или HTML-страница прокси).
+ */
+async function getUploadErrorMessage(response, t) {
+  if (response.status === 413 || response.status === 507) {
+    return t(
+      'hec.uploadPayloadTooLarge',
+      'Файл слишком большой. Уменьшите размер файла или обратитесь к администратору.'
+    )
+  }
+  const ct = (response.headers.get('content-type') || '').toLowerCase()
+  let text = ''
+  try {
+    text = await response.text()
+  } catch {
+    return t('hec.uploadReadBodyFailed', 'Не удалось прочитать ответ сервера.')
+  }
+  const trimmed = text.trim()
+  if (
+    ct.includes('application/json') &&
+    (trimmed.startsWith('{') || trimmed.startsWith('['))
+  ) {
+    try {
+      const data = JSON.parse(trimmed)
+      const fromDetail = detailFromJson(data)
+      if (fromDetail) return fromDetail
+    } catch {
+      /* игнорируем и используем запасной текст */
+    }
+  }
+  if (trimmed && !trimmed.startsWith('<') && trimmed.length < 2000) {
+    return trimmed
+  }
+  return t('hec.uploadHttpError', { status: response.status })
+}
+
+const fileExceedsClientLimit = (file) =>
+  Boolean(file && file.size > MAX_HECRAS_UPLOAD_BYTES)
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
@@ -45,6 +104,7 @@ export default function HecRasProjects() {
   const [newProjectName, setNewProjectName] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploadError, setUploadError] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   // Состояния для меню
   const [menuAnchorEl, setMenuAnchorEl] = useState(null)
@@ -92,16 +152,38 @@ export default function HecRasProjects() {
     setNewProjectName('')
     setSelectedFile(null)
     setUploadError('')
+    setUploading(false)
   }
 
   const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0] || null)
+    const file = e.target.files[0] || null
+    setSelectedFile(file)
+    setUploadError('')
+    if (file && file.size > MAX_HECRAS_UPLOAD_BYTES) {
+      setUploadError(
+        t('hec.uploadFileTooLargeClient', {
+          maxMb: Math.floor(MAX_HECRAS_UPLOAD_BYTES / (1024 * 1024)),
+        })
+      )
+    }
   }
 
   // Функция для загрузки проекта на сервер
   const handleUpload = async () => {
+    if (uploading) return
+    setUploadError('')
+
     if (!newProjectName || !selectedFile) {
       setUploadError('Пожалуйста, укажите имя проекта и выберите файл.')
+      return
+    }
+
+    if (selectedFile.size > MAX_HECRAS_UPLOAD_BYTES) {
+      setUploadError(
+        t('hec.uploadFileTooLargeClient', {
+          maxMb: Math.floor(MAX_HECRAS_UPLOAD_BYTES / (1024 * 1024)),
+        })
+      )
       return
     }
 
@@ -111,27 +193,64 @@ export default function HecRasProjects() {
 
     const token = localStorage.getItem('token')
 
+    setUploading(true)
     try {
       const res = await fetch('/api/hec-ras/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       })
 
       if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.detail || t('hec.loadError'))
+        const msg = await getUploadErrorMessage(res, t)
+        setUploadError(msg)
+        return
       }
 
-      await res.json()
-      loadProjects() // Перезагружаем список
-      handleCloseAdd()
+      const ct = (res.headers.get('content-type') || '').toLowerCase()
+      if (!ct.includes('application/json')) {
+        setUploadError(
+          t(
+            'hec.uploadInvalidResponse',
+            'Сервер вернул неожиданный ответ. Попробуйте позже или обратитесь к администратору.'
+          )
+        )
+        return
+      }
 
+      try {
+        await res.json()
+      } catch {
+        setUploadError(
+          t(
+            'hec.uploadInvalidResponse',
+            'Сервер вернул неожиданный ответ. Попробуйте позже или обратитесь к администратору.'
+          )
+        )
+        return
+      }
+
+      loadProjects()
+      handleCloseAdd()
     } catch (err) {
       console.error('Upload error:', err)
-      setUploadError(err.message)
+      const isNetwork =
+        err instanceof TypeError &&
+        (err.message === 'Failed to fetch' || err.message.includes('NetworkError') || err.message.includes('Load failed'))
+      setUploadError(
+        isNetwork
+          ? t(
+              'hec.uploadNetworkError',
+              'Сеть недоступна или запрос не выполнен. Проверьте подключение к интернету и попробуйте снова.'
+            )
+          : err instanceof Error
+            ? err.message
+            : t('hec.uploadUnknownError', 'Не удалось выполнить загрузку. Попробуйте снова.')
+      )
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -392,6 +511,11 @@ export default function HecRasProjects() {
           confirmText={t('hec.save', 'Сохранить')}
           onConfirm={handleUpload}
           cancelText={t('hec.cancel', 'Отмена')}
+          confirmLoading={uploading}
+          confirmDisabled={fileExceedsClientLimit(selectedFile)}
+          disableBackdropClick={uploading}
+          disableEscapeKeyDown={uploading}
+          showCloseButton={!uploading}
         >
           <TextField
             autoFocus
@@ -404,11 +528,13 @@ export default function HecRasProjects() {
             variant="standard"
             value={newProjectName}
             onChange={(e) => setNewProjectName(e.target.value)}
+            disabled={uploading}
           />
           <Button
             variant="outlined"
             component="label"
             sx={{ mt: 2 }}
+            disabled={uploading}
           >
             {t('hec.selectFile', 'Выбрать .db файл')}
             <input
@@ -417,10 +543,23 @@ export default function HecRasProjects() {
               required
               accept=".db"
               onChange={handleFileChange}
+              disabled={uploading}
             />
           </Button>
-          {selectedFile && <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>}
-          {uploadError && <Typography color="error" sx={{ mt: 2 }}>{uploadError}</Typography>}
+          {selectedFile && (
+            <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>
+          )}
+          {uploading && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+              <CircularProgress size={20} />
+              <Typography color="text.secondary">{t('hec.uploadUploading', 'Загрузка...')}</Typography>
+            </Box>
+          )}
+          {uploadError && (
+            <Alert severity="error" sx={{ mt: 2 }} onClose={() => setUploadError('')}>
+              {uploadError}
+            </Alert>
+          )}
         </BaseModal>
       </Box>
     )
@@ -508,6 +647,11 @@ export default function HecRasProjects() {
         confirmText={t('hec.save', 'Сохранить')}
         onConfirm={handleUpload}
         cancelText={t('hec.cancel', 'Отмена')}
+        confirmLoading={uploading}
+        confirmDisabled={fileExceedsClientLimit(selectedFile)}
+        disableBackdropClick={uploading}
+        disableEscapeKeyDown={uploading}
+        showCloseButton={!uploading}
       >
         <TextField
           autoFocus
@@ -520,11 +664,13 @@ export default function HecRasProjects() {
           variant="standard"
           value={newProjectName}
           onChange={(e) => setNewProjectName(e.target.value)}
+          disabled={uploading}
         />
         <Button
           variant="outlined"
           component="label"
           sx={{ mt: 2 }}
+          disabled={uploading}
         >
           {t('hec.selectFile', 'Выбрать .db файл')}
           <input
@@ -533,10 +679,23 @@ export default function HecRasProjects() {
             required
             accept=".db"
             onChange={handleFileChange}
+            disabled={uploading}
           />
         </Button>
-        {selectedFile && <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>}
-        {uploadError && <Typography color="error" sx={{ mt: 2 }}>{uploadError}</Typography>}
+        {selectedFile && (
+          <Typography sx={{ display: 'inline', ml: 2, fontStyle: 'italic' }}>{selectedFile.name}</Typography>
+        )}
+        {uploading && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+            <CircularProgress size={20} />
+            <Typography color="text.secondary">{t('hec.uploadUploading', 'Загрузка...')}</Typography>
+          </Box>
+        )}
+        {uploadError && (
+          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setUploadError('')}>
+            {uploadError}
+          </Alert>
+        )}
       </BaseModal>
 
       {/* Модальное окно подтверждения удаления */}
